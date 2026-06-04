@@ -1118,10 +1118,10 @@ export const TRADE_ROUTES: { from: string; to: string; value: number }[] = [
 
 // Chinese provinces held by each side at start of civil war (1947)
 // Communists held NE China (Manchuria, Inner Mongolia), nationalists held the rest
-export const CHINA_COMMUNIST_INITIAL = ['cn_manchuria', 'cn_mongolia', 'cn_beijing'];
-export const CHINA_NATIONALIST_INITIAL = ['cn_shanghai', 'cn_shanxi', 'cn_sichuan', 'cn_tibet', 'cn_yunnan', 'cn_guangdong', 'cn_xinjiang'];
+export const CHINA_COMMUNIST_INITIAL = ['cn_manchuria', 'cn_mongolia', 'cn_beijing', 'cn_shanxi'];
+export const CHINA_NATIONALIST_INITIAL = ['cn_shanghai', 'cn_sichuan', 'cn_tibet', 'cn_yunnan', 'cn_guangdong', 'cn_xinjiang'];
 // All Chinese mainland provinces in order of communist advance
-export const CHINA_COMMUNIST_ADVANCE_ORDER = ['cn_shanxi', 'cn_xinjiang', 'cn_sichuan', 'cn_yunnan', 'cn_guangdong', 'cn_shanghai', 'cn_tibet'];
+export const CHINA_COMMUNIST_ADVANCE_ORDER = ['cn_xinjiang', 'cn_sichuan', 'cn_yunnan', 'cn_guangdong', 'cn_shanghai', 'cn_tibet'];
 // Nationalists can recapture any province the communists hold.
 // Order: start with their own lost territory (reverse of communist advance), then the original communist heartland.
 export const CHINA_NATIONALIST_ADVANCE_ORDER = ['cn_tibet', 'cn_shanghai', 'cn_guangdong', 'cn_yunnan', 'cn_sichuan', 'cn_xinjiang', 'cn_shanxi', 'cn_beijing', 'cn_mongolia', 'cn_manchuria'];

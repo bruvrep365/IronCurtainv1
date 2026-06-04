@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { GameState, Faction, UnitType, CombatResult, EventChoice, FocusTree, FocusNode, Unit, ChinaCivilWar } from './lib/types';
+import { GameState, Faction, UnitType, CombatResult, EventChoice, FocusTree, FocusNode, Unit, ChinaCivilWar, Country } from './lib/types';
 import { INITIAL_STATE, EVENTS, UNIT_TYPES, getUnitBuild, CHINA_COMMUNIST_ADVANCE_ORDER, CHINA_NATIONALIST_ADVANCE_ORDER } from './lib/constants';
 
 function resolveFocusNode(node: FocusNode, player: Faction, stats: GameState['usaStats']): GameState['usaStats'] {
@@ -144,26 +144,33 @@ function resolveChinaCivilWar(state: GameState, newYear: number, newMonth: numbe
   if (!Array.isArray(ccw.nationalistStates)) ccw.nationalistStates = [...DEFAULT_CCW.nationalistStates];
 
   // --- Monthly battle roll ---
-  // Province-win probability is determined by how much aid the player sent this turn:
-  //   0 aid  → communists win 65% (historical lean, no intervention)
-  //   1 aid  → player's allied side wins 55%
-  //   2 aid  → player's allied side wins 60%
-  //   3 aid  → player's allied side wins 65%
+  // Province-win probability is determined by how much aid the player sent this turn,
+  // plus a permanent bonus from total cumulative Soviet military aid ever sent.
+  //
+  // No intervention → communists win 65% (historical lean)
+  // USSR aid per turn: 1 → 70%, 2 → 78%, 3 → 87%
+  // Total communist aid bonus: +1% per 3 points of total aid (capped at +10%)
+  // USA aid per turn: 1 → nationalist wins 55%, 2 → 62%, 3 → 70%
   const monthlyAdvantage = ccw.communistAid - ccw.nationalistAid;
   const playerFaction = state.playerFaction;
   const playerAid = playerFaction === 'ussr' ? ccw.communistAid : ccw.nationalistAid;
 
+  // Cumulative Soviet aid bonus: every 3 total aid points adds 1% to communist base odds (cap +10%)
+  const cumulativeSovietBonus = Math.min(0.10, Math.floor((ccw.totalCommunistAid ?? 0) / 3) * 0.01);
+
   let communistChance: number;
   if (playerAid === 0) {
-    // No intervention this turn — communists have the historical 65% lean
-    communistChance = 0.65;
+    // No intervention this turn — communists have the historical lean, boosted by past Soviet aid
+    communistChance = 0.65 + cumulativeSovietBonus;
   } else if (playerFaction === 'ussr') {
-    // USSR backing communists
-    communistChance = playerAid >= 3 ? 0.65 : playerAid === 2 ? 0.60 : 0.55;
+    // USSR backing communists — larger per-turn bonuses than the nationalist side
+    const base = playerAid >= 3 ? 0.87 : playerAid === 2 ? 0.78 : 0.70;
+    communistChance = Math.min(0.95, base + cumulativeSovietBonus);
   } else {
     // USA backing nationalists (flip: nationalist advantage)
-    const nationalistChance = playerAid >= 3 ? 0.65 : playerAid === 2 ? 0.60 : 0.55;
-    communistChance = 1 - nationalistChance;
+    const nationalistChance = playerAid >= 3 ? 0.70 : playerAid === 2 ? 0.62 : 0.55;
+    // Past Soviet investment still tilts the underlying odds even when USA sends aid
+    communistChance = Math.max(0.05, 1 - nationalistChance + cumulativeSovietBonus);
   }
 
   // Stalemate-breaker: detect back-and-forth oscillation by tracking direction reversals.
