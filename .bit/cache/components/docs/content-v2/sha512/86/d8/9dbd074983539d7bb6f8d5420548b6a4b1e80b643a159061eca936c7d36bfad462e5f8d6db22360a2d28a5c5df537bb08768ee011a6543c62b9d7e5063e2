@@ -1,0 +1,1 @@
+[{"name":"","description":"IronCurtain is the root application component for the Iron Curtain\nCold War grand strategy simulation. It mounts the full game experience\nat the root route.","args":[],"returns":{},"access":"public","examples":[],"render":"","properties":[],"static":false,"filePath":"iron-curtain.tsx"}]

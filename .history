@@ -1,0 +1,9 @@
+
+git add .
+install git
+git -- version
+git -v
+git -h
+git -commit
+git commit
+git init
