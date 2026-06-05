@@ -82,7 +82,7 @@ function StaticNode({
         background: bgColor,
         opacity: isLocked ? 0.4 : 1,
         cursor: canStart ? 'pointer' : 'default',
-        padding: '10px 14px',
+        padding: '7px 10px',
         boxShadow: isAvailable ? `0 0 10px ${color.border}44` : isActive ? `0 0 12px rgba(255,221,68,0.25)` : 'none',
       }}
       onClick={() => canStart && onStartFocus(node.id)}
@@ -142,14 +142,14 @@ function StaticTreePanel({
   const sortedRows = [...rows.entries()].sort((a, b) => a[0] - b[0]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-4">
-      <div className="flex flex-col gap-6 max-w-4xl mx-auto">
+    <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex flex-col gap-4 max-w-3xl mx-auto">
         {sortedRows.map(([row, rowNodes]) => (
           <div key={row}>
-            <div className="text-xs uppercase tracking-widest mb-2 font-bold" style={{ color: color.border }}>
+            <div className="text-xs uppercase tracking-widest mb-1.5 font-bold" style={{ color: color.border }}>
               Tier {row + 1}
             </div>
-            <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(rowNodes.length, 3)}, 1fr)` }}>
+            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(rowNodes.length, 3)}, 1fr)` }}>
               {rowNodes.sort((a, b) => a.x - b.x).map(node => (
                 <StaticNode key={node.id} node={node} tree={tree} color={color} onStartFocus={onStartFocus} />
               ))}
@@ -166,10 +166,10 @@ function StaticTreePanel({
 
 // --- Political subtree (draggable canvas + choice screen) ---
 
-const POL_NODE_W = 220;
-const POL_NODE_H = 110;
-const POL_COL_GAP = 60;
-const POL_ROW_GAP = 24;
+const POL_NODE_W = 190;
+const POL_NODE_H = 95;
+const POL_COL_GAP = 44;
+const POL_ROW_GAP = 20;
 
 function PolNodeCard({
   node, tree, onStartFocus,
@@ -205,7 +205,7 @@ function PolNodeCard({
         background: isCompleted ? pathColor.bg + 'cc' : isAvailable ? pathColor.bg : '#090909',
         opacity: isLocked ? 0.4 : 1,
         cursor: canStart ? 'pointer' : 'default',
-        padding: '10px 12px',
+        padding: '8px 10px',
         boxShadow: isAvailable ? `0 0 8px ${pathColor.border}55` : 'none',
       }}
       onClick={() => canStart && onStartFocus(node.id)}
@@ -352,49 +352,47 @@ function PoliticalCanvas({
 
 function PoliticalChoiceScreen({ onChoose }: { onChoose: (path: PoliticalPath) => void }) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-8 p-8" style={{ background: '#08100a' }}>
+    <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6" style={{ background: '#050c07' }}>
       <div className="text-center">
-        <div className="text-xs uppercase tracking-widest mb-2" style={{ color: '#bf8a30' }}>IDEOLOGICAL CROSSROADS</div>
-        <h3 className="text-2xl font-bold uppercase tracking-widest mb-3" style={{ color: '#e6c060', textShadow: '0 0 20px rgba(230,192,96,0.3)' }}>
+        <div className="text-xs uppercase tracking-widest mb-1.5" style={{ color: '#bf8a30' }}>IDEOLOGICAL CROSSROADS</div>
+        <h3 className="text-xl font-bold uppercase tracking-widest mb-2" style={{ color: '#e6c060', textShadow: '0 0 16px rgba(230,192,96,0.25)' }}>
           Choose the Soviet Path
         </h3>
-        <p className="text-sm max-w-xl leading-relaxed" style={{ color: '#5a6a5a' }}>
-          The direction of the Soviet state must be decided. This choice is permanent and will define your political strategy for the remainder of the Cold War.
+        <p className="text-xs max-w-md leading-relaxed" style={{ color: '#4a5a4a' }}>
+          This choice is permanent and will define your political strategy for the remainder of the Cold War.
         </p>
       </div>
-      <div className="flex gap-8">
+      <div className="flex gap-5">
         <button
           onClick={() => onChoose('stalinist')}
-          className="flex flex-col gap-3 p-6 border-2 text-left transition-all duration-200 hover:scale-105"
-          style={{ width: 280, borderColor: '#8a1a1a', background: '#1a0808', boxShadow: '0 0 20px rgba(138,26,26,0.2)' }}
+          className="flex flex-col gap-2 p-4 border-2 text-left transition-all duration-200 hover:scale-[1.03]"
+          style={{ width: 220, borderColor: '#8a1a1a', background: '#120606', boxShadow: '0 0 16px rgba(138,26,26,0.15)' }}
         >
-          <div className="text-3xl text-center" style={{ color: '#ff4444' }}>☭</div>
-          <div className="text-lg font-bold uppercase tracking-widest" style={{ color: '#ff6666' }}>STALINIST PATH</div>
-          <div className="text-xs leading-relaxed" style={{ color: '#8a5a5a' }}>
-            Rule through fear and iron discipline. Purges, collectivization, and the cult of personality. High tension but overwhelming military and economic power.
+          <div className="text-2xl text-center w-full" style={{ color: '#ff4444' }}>☭</div>
+          <div className="text-sm font-bold uppercase tracking-widest" style={{ color: '#ff6666' }}>STALINIST</div>
+          <div className="text-xs leading-relaxed" style={{ color: '#7a4a4a' }}>
+            Rule through fear and iron discipline. Overwhelming military power at the cost of high tension.
           </div>
-          <div className="flex flex-col gap-1 mt-2">
+          <div className="flex flex-col gap-0.5 mt-1">
             <div className="text-xs" style={{ color: '#bf4a4a' }}>+ Strong GDP & Military</div>
             <div className="text-xs" style={{ color: '#bf4a4a' }}>+ Nuclear superiority</div>
-            <div className="text-xs" style={{ color: '#ff9944' }}>– High tension risk</div>
-            <div className="text-xs" style={{ color: '#ff9944' }}>– Alienates neutral nations</div>
+            <div className="text-xs" style={{ color: '#996633' }}>– High tension risk</div>
           </div>
         </button>
         <button
           onClick={() => onChoose('reformist')}
-          className="flex flex-col gap-3 p-6 border-2 text-left transition-all duration-200 hover:scale-105"
-          style={{ width: 280, borderColor: '#1a5a3a', background: '#081a10', boxShadow: '0 0 20px rgba(26,90,58,0.2)' }}
+          className="flex flex-col gap-2 p-4 border-2 text-left transition-all duration-200 hover:scale-[1.03]"
+          style={{ width: 220, borderColor: '#1a5a3a', background: '#060e09', boxShadow: '0 0 16px rgba(26,90,58,0.15)' }}
         >
-          <div className="text-3xl text-center" style={{ color: '#4ab84a' }}>☀</div>
-          <div className="text-lg font-bold uppercase tracking-widest" style={{ color: '#4ab84a' }}>REFORMIST PATH</div>
-          <div className="text-xs leading-relaxed" style={{ color: '#4a6a4a' }}>
-            Glasnost, Perestroika, and de-Stalinization. Build soft power through diplomacy, economic openness, and arms reduction. Lower tension but slower military growth.
+          <div className="text-2xl text-center w-full" style={{ color: '#4ab84a' }}>☀</div>
+          <div className="text-sm font-bold uppercase tracking-widest" style={{ color: '#4ab84a' }}>REFORMIST</div>
+          <div className="text-xs leading-relaxed" style={{ color: '#3a5a3a' }}>
+            Glasnost and Perestroika. Build soft power through diplomacy and economic openness.
           </div>
-          <div className="flex flex-col gap-1 mt-2">
+          <div className="flex flex-col gap-0.5 mt-1">
             <div className="text-xs" style={{ color: '#4ab84a' }}>+ Tension reduction</div>
             <div className="text-xs" style={{ color: '#4ab84a' }}>+ Diplomatic prestige</div>
-            <div className="text-xs" style={{ color: '#bf9944' }}>– Weaker military</div>
-            <div className="text-xs" style={{ color: '#bf9944' }}>– Slower economic growth</div>
+            <div className="text-xs" style={{ color: '#996633' }}>– Weaker military</div>
           </div>
         </button>
       </div>
@@ -462,9 +460,9 @@ export function FocusTree({ tree, playerFaction, onClose, onStartFocus, onChoose
   const tabNodes = tree.nodes.filter(n => n.category === (activeTab as FocusCategory));
 
   return (
-    <div className="fixed inset-0 bg-black/92 z-50 flex flex-col overflow-hidden" style={{ fontFamily: 'Space Mono, monospace' }}>
+    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden" style={{ fontFamily: 'Space Mono, monospace', background: 'rgba(2,5,2,0.97)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b shrink-0" style={{ borderColor: '#1a2a1a', background: '#060e06' }}>
+      <div className="flex items-center justify-between px-6 py-3 border-b shrink-0" style={{ borderColor: '#111a11', background: '#030803' }}>
         <div className="flex items-center gap-4">
           <h2 className="text-xl font-bold tracking-widest uppercase" style={{ color: '#00e676', textShadow: '0 0 16px rgba(0,230,118,0.3)' }}>
             NATIONAL FOCUS TREE
@@ -493,7 +491,7 @@ export function FocusTree({ tree, playerFaction, onClose, onStartFocus, onChoose
       </div>
 
       {/* Tab bar */}
-      <div className="flex border-b shrink-0" style={{ borderColor: '#1a2a1a', background: '#060e06' }}>
+      <div className="flex border-b shrink-0" style={{ borderColor: '#111a11', background: '#030803' }}>
         {TAB_CONFIG.map(tab => {
           if (tab.id === 'political' && playerFaction !== 'ussr') return null;
           const isActive = activeTab === tab.id;
