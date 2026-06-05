@@ -407,6 +407,12 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
           const resolvedStats = resolveFocusNode(justCompleted, faction, stats);
           if (faction === 'usa') { nextUSA.gdp = resolvedStats.gdp; nextUSA.prestige = resolvedStats.prestige; nextUSA.military = resolvedStats.military; nextUSA.nuclearWarheads = resolvedStats.nuclearWarheads; nextUSA.researchPoints = resolvedStats.researchPoints; }
           else { nextUSSR.gdp = resolvedStats.gdp; nextUSSR.prestige = resolvedStats.prestige; nextUSSR.military = resolvedStats.military; nextUSSR.nuclearWarheads = resolvedStats.nuclearWarheads; nextUSSR.researchPoints = resolvedStats.researchPoints; }
+          // Non-historical Stalinist World Order victory: completing sni2 wins the game for USSR
+          if (justCompleted.id === 'sni2' && state.playerFaction === 'ussr' && newStatus !== 'gameover') {
+            newStatus = 'gameover';
+            winner = 'ussr';
+            reason = 'STALINIST WORLD ORDER — Communist revolution sweeps the globe. The Soviet Union achieves total ideological dominance.';
+          }
         }
         // Unlock prerequisites
         const updatedNodes = updated.map(n => {
