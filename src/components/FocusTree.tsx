@@ -11,35 +11,32 @@ interface FocusTreeProps {
 
 type Tab = 'economic' | 'military' | 'intelligence' | 'political';
 
-const TAB_CONFIG: { id: Tab; label: string; color: { bg: string; border: string; text: string; dim: string } }[] = [
-  { id: 'economic',      label: 'ECONOMIC',      color: { bg: '#0d2a0d', border: '#1a5a1a', text: '#4ab84a', dim: '#2a4a2a' } },
-  { id: 'military',      label: 'MILITARY',      color: { bg: '#0d1a2a', border: '#1a3a5a', text: '#4a7abf', dim: '#1a2a3a' } },
-  { id: 'intelligence',  label: 'INTELLIGENCE',  color: { bg: '#1a0d2a', border: '#3a1a5a', text: '#8a4abf', dim: '#2a1a3a' } },
-  { id: 'political',     label: 'POLITICAL',     color: { bg: '#2a1a0d', border: '#5a3a1a', text: '#bf8a30', dim: '#3a2a0d' } },
+const TAB_CONFIG: { id: Tab; label: string; color: { bg: string; border: string; text: string; accent: string } }[] = [
+  { id: 'economic',     label: 'ECONOMIC',     color: { bg: '#0d2a0d', border: '#1a5a1a', text: '#4ab84a', accent: '#00e676' } },
+  { id: 'military',     label: 'MILITARY',     color: { bg: '#0d1a2a', border: '#1a3a5a', text: '#4a7abf', accent: '#4a9aff' } },
+  { id: 'intelligence', label: 'INTELLIGENCE', color: { bg: '#1a0d2a', border: '#3a1a5a', text: '#8a4abf', accent: '#b07aff' } },
+  { id: 'political',    label: 'POLITICAL',    color: { bg: '#2a1a0d', border: '#5a3a1a', text: '#bf8a30', accent: '#e6c060' } },
 ];
 
 const STATUS_COLORS: Record<string, string> = {
-  locked:     '#3a3a3a',
-  available:  '#00e676',
-  researching:'#ffdd44',
-  completed:  '#00ff88',
+  locked:      '#3a3a3a',
+  available:   '#00e676',
+  researching: '#ffdd44',
+  completed:   '#00ff88',
 };
 
-const NODE_W = 220;
-const NODE_H = 110;
-const COL_GAP = 60;
-const ROW_GAP = 24;
+// --- Static tree (original style) for economic/military/intelligence ---
 
 function EffectTags({ effects }: { effects: FocusNode['effects'] }) {
   const tags: { label: string; color: string }[] = [];
-  if (effects.gdp)           tags.push({ label: `GDP +${effects.gdp}`,       color: '#4ab84a' });
-  if (effects.prestige)      tags.push({ label: `PRE +${effects.prestige}`,   color: '#4ab84a' });
-  if (effects.military)      tags.push({ label: `MIL +${effects.military}`,   color: '#4a7abf' });
+  if (effects.gdp)            tags.push({ label: `GDP +${effects.gdp}`,         color: '#4ab84a' });
+  if (effects.prestige)       tags.push({ label: `PRE +${effects.prestige}`,     color: '#4ab84a' });
+  if (effects.military)       tags.push({ label: `MIL +${effects.military}`,     color: '#4a7abf' });
   if (effects.tension && effects.tension > 0) tags.push({ label: `TENS +${effects.tension}`, color: '#bf4a4a' });
   if (effects.tension && effects.tension < 0) tags.push({ label: `TENS ${effects.tension}`,  color: '#4ab84a' });
-  if (effects.nuclearWarheads) tags.push({ label: `NUKES +${effects.nuclearWarheads}`, color: '#ff4444' });
-  if (effects.researchPoints)  tags.push({ label: `RES +${effects.researchPoints}`,    color: '#8a4abf' });
-  if (effects.unlockUnit)      tags.push({ label: `UNLOCK ${effects.unlockUnit}`.toUpperCase(), color: '#4a7abf' });
+  if (effects.nuclearWarheads)  tags.push({ label: `NUKES +${effects.nuclearWarheads}`, color: '#ff4444' });
+  if (effects.researchPoints)   tags.push({ label: `RES +${effects.researchPoints}`,    color: '#8a4abf' });
+  if (effects.unlockUnit)       tags.push({ label: `UNLOCK ${effects.unlockUnit.toUpperCase()}`, color: '#4a7abf' });
   return (
     <div className="flex flex-wrap gap-1 mt-1">
       {tags.map((t, i) => (
@@ -51,12 +48,12 @@ function EffectTags({ effects }: { effects: FocusNode['effects'] }) {
   );
 }
 
-function NodeCard({
+function StaticNode({
   node, tree, color, onStartFocus,
 }: {
   node: FocusNode;
   tree: FocusTreeType;
-  color: { bg: string; border: string; text: string };
+  color: { bg: string; border: string; text: string; accent: string };
   onStartFocus: (id: string) => void;
 }) {
   const isLocked      = node.status === 'locked';
@@ -66,34 +63,155 @@ function NodeCard({
   const canStart      = isAvailable && !tree.activeNodeId;
   const isActive      = tree.activeNodeId === node.id;
 
-  const borderColor = isCompleted   ? color.text
+  const borderColor = isCompleted   ? color.accent
                     : isResearching ? '#ffdd44'
                     : isActive      ? '#ffdd44'
                     : isAvailable   ? color.border
-                    : '#2a2a2a';
+                    : '#1e1e1e';
 
-  const bgColor = isCompleted   ? color.bg + 'aa'
-                : isResearching ? color.bg + 'cc'
+  const bgColor = isCompleted   ? color.bg + 'cc'
+                : isResearching ? color.bg + 'dd'
                 : isAvailable   ? color.bg
-                : '#0a0a0a';
+                : '#090909';
 
   return (
     <div
       className="transition-all duration-150 select-none"
       style={{
-        width: NODE_W,
-        minHeight: NODE_H,
         border: `1px solid ${borderColor}`,
         background: bgColor,
-        opacity: isLocked ? 0.45 : 1,
+        opacity: isLocked ? 0.4 : 1,
+        cursor: canStart ? 'pointer' : 'default',
+        padding: '10px 14px',
+        boxShadow: isAvailable ? `0 0 10px ${color.border}44` : isActive ? `0 0 12px rgba(255,221,68,0.25)` : 'none',
+      }}
+      onClick={() => canStart && onStartFocus(node.id)}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: isCompleted ? color.accent : isLocked ? '#3a4a3a' : '#aacaaa' }}>
+              {node.icon} {node.name}
+            </span>
+            <span className="text-xs font-mono shrink-0" style={{ color: STATUS_COLORS[node.status] }}>
+              {isCompleted   ? '✓ DONE'
+              : isResearching ? `${node.turnsRemaining}t left`
+              : isAvailable   ? 'AVAILABLE'
+              : 'LOCKED'}
+            </span>
+          </div>
+          <p className="text-xs leading-snug mb-1" style={{ color: isLocked ? '#2a3a2a' : '#5a6a5a' }}>{node.description}</p>
+          {node.prerequisites.length > 0 && (
+            <div className="text-xs" style={{ color: '#3a4a3a' }}>
+              Requires: {node.prerequisites.map(p => tree.nodes.find(n => n.id === p)?.name ?? p).join(', ')}
+            </div>
+          )}
+          <EffectTags effects={node.effects} />
+        </div>
+        <div className="shrink-0 text-right">
+          {canStart && (
+            <div className="text-xs font-bold px-2 py-1 border mt-1" style={{ borderColor: color.border, color: color.accent, background: color.bg }}>
+              {node.turnsRequired}T — START
+            </div>
+          )}
+          {isResearching && (
+            <div className="text-xs font-bold px-2 py-1 border mt-1" style={{ borderColor: '#ffdd4466', color: '#ffdd44', background: '#1a1a0a' }}>
+              IN PROGRESS
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StaticTreePanel({
+  nodes, tree, color, onStartFocus,
+}: {
+  nodes: FocusNode[];
+  tree: FocusTreeType;
+  color: { bg: string; border: string; text: string; accent: string };
+  onStartFocus: (id: string) => void;
+}) {
+  // Group nodes by row (y-coord) for a clean tier layout
+  const rows = new Map<number, FocusNode[]>();
+  nodes.forEach(n => {
+    if (!rows.has(n.y)) rows.set(n.y, []);
+    rows.get(n.y)!.push(n);
+  });
+  const sortedRows = [...rows.entries()].sort((a, b) => a[0] - b[0]);
+
+  return (
+    <div className="flex-1 overflow-y-auto px-6 py-4">
+      <div className="flex flex-col gap-6 max-w-4xl mx-auto">
+        {sortedRows.map(([row, rowNodes]) => (
+          <div key={row}>
+            <div className="text-xs uppercase tracking-widest mb-2 font-bold" style={{ color: color.border }}>
+              Tier {row + 1}
+            </div>
+            <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(rowNodes.length, 3)}, 1fr)` }}>
+              {rowNodes.sort((a, b) => a.x - b.x).map(node => (
+                <StaticNode key={node.id} node={node} tree={tree} color={color} onStartFocus={onStartFocus} />
+              ))}
+            </div>
+          </div>
+        ))}
+        {nodes.length === 0 && (
+          <div className="text-xs text-center py-12" style={{ color: '#3a4a3a' }}>No nodes in this category.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- Political subtree (draggable canvas + choice screen) ---
+
+const POL_NODE_W = 220;
+const POL_NODE_H = 110;
+const POL_COL_GAP = 60;
+const POL_ROW_GAP = 24;
+
+function PolNodeCard({
+  node, tree, onStartFocus,
+}: {
+  node: FocusNode;
+  tree: FocusTreeType;
+  onStartFocus: (id: string) => void;
+}) {
+  const pathColor = node.id.startsWith('sp_s') ? { bg: '#1a0808', border: '#8a1a1a', text: '#ff6666', accent: '#ff4444' }
+                  : node.id.startsWith('sp_r') ? { bg: '#081a10', border: '#1a5a3a', text: '#4ab84a', accent: '#00e676' }
+                  : { bg: '#2a1a0d', border: '#5a3a1a', text: '#bf8a30', accent: '#e6c060' };
+
+  const isLocked      = node.status === 'locked';
+  const isResearching = node.status === 'researching';
+  const isCompleted   = node.status === 'completed';
+  const isAvailable   = node.status === 'available';
+  const canStart      = isAvailable && !tree.activeNodeId;
+  const isActive      = tree.activeNodeId === node.id;
+
+  const borderColor = isCompleted   ? pathColor.accent
+                    : isResearching ? '#ffdd44'
+                    : isActive      ? '#ffdd44'
+                    : isAvailable   ? pathColor.border
+                    : '#1e1e1e';
+
+  return (
+    <div
+      className="transition-all duration-150 select-none"
+      style={{
+        width: POL_NODE_W,
+        minHeight: POL_NODE_H,
+        border: `1px solid ${borderColor}`,
+        background: isCompleted ? pathColor.bg + 'cc' : isAvailable ? pathColor.bg : '#090909',
+        opacity: isLocked ? 0.4 : 1,
         cursor: canStart ? 'pointer' : 'default',
         padding: '10px 12px',
-        boxShadow: isAvailable && !isLocked ? `0 0 8px ${color.border}55` : 'none',
+        boxShadow: isAvailable ? `0 0 8px ${pathColor.border}55` : 'none',
       }}
       onClick={() => canStart && onStartFocus(node.id)}
     >
       <div className="flex items-start justify-between gap-1 mb-1">
-        <span className="text-xs font-bold uppercase tracking-wide leading-tight" style={{ color: isCompleted ? color.text : '#aacaaa', maxWidth: 130 }}>
+        <span className="text-xs font-bold uppercase tracking-wide leading-tight" style={{ color: isCompleted ? pathColor.accent : '#aacaaa', maxWidth: 130 }}>
           {node.name}
         </span>
         <span className="text-xs shrink-0 font-mono" style={{ color: STATUS_COLORS[node.status] }}>
@@ -111,7 +229,7 @@ function NodeCard({
       )}
       <EffectTags effects={node.effects} />
       {canStart && (
-        <div className="text-xs mt-2 font-bold tracking-widest" style={{ color: color.text }}>
+        <div className="text-xs mt-2 font-bold tracking-widest" style={{ color: pathColor.accent }}>
           [{node.turnsRequired} TURNS] CLICK TO START
         </div>
       )}
@@ -119,13 +237,11 @@ function NodeCard({
   );
 }
 
-// Renders SVG connector lines between nodes based on prerequisites
-function ConnectorLines({
-  nodes, positions, color,
+function PolConnectorLines({
+  nodes, positions,
 }: {
   nodes: FocusNode[];
   positions: Map<string, { x: number; y: number }>;
-  color: string;
 }) {
   const lines: JSX.Element[] = [];
   nodes.forEach(node => {
@@ -134,12 +250,14 @@ function ConnectorLines({
     node.prerequisites.forEach(prereqId => {
       const from = positions.get(prereqId);
       if (!from) return;
-      const x1 = from.x + NODE_W / 2;
-      const y1 = from.y + NODE_H;
-      const x2 = to.x + NODE_W / 2;
+      const x1 = from.x + POL_NODE_W / 2;
+      const y1 = from.y + POL_NODE_H;
+      const x2 = to.x + POL_NODE_W / 2;
       const y2 = to.y;
       const prereqNode = nodes.find(n => n.id === prereqId);
-      const lineColor = prereqNode?.status === 'completed' ? color : '#2a3a2a';
+      const lineColor = prereqNode?.status === 'completed'
+        ? (node.id.startsWith('sp_s') ? '#8a1a1a' : node.id.startsWith('sp_r') ? '#1a5a3a' : '#5a3a1a')
+        : '#2a2a2a';
       lines.push(
         <path
           key={`${prereqId}->${node.id}`}
@@ -147,7 +265,7 @@ function ConnectorLines({
           fill="none"
           stroke={lineColor}
           strokeWidth={1.5}
-          strokeDasharray={prereqNode?.status === 'completed' ? 'none' : '4 3'}
+          strokeDasharray={prereqNode?.status === 'completed' ? undefined : '4 3'}
           opacity={0.7}
         />
       );
@@ -156,8 +274,7 @@ function ConnectorLines({
   return <>{lines}</>;
 }
 
-// Builds absolute pixel positions for each node using their (x, y) grid coords
-function buildPositions(nodes: FocusNode[], colCount: number): { positions: Map<string, { x: number; y: number }>; totalW: number; totalH: number } {
+function buildPolPositions(nodes: FocusNode[]): { positions: Map<string, { x: number; y: number }>; totalW: number; totalH: number } {
   const positions = new Map<string, { x: number; y: number }>();
   let maxX = 0;
   let maxY = 0;
@@ -167,94 +284,31 @@ function buildPositions(nodes: FocusNode[], colCount: number): { positions: Map<
   });
   nodes.forEach(n => {
     positions.set(n.id, {
-      x: n.x * (NODE_W + COL_GAP),
-      y: n.y * (NODE_H + ROW_GAP),
+      x: n.x * (POL_NODE_W + POL_COL_GAP),
+      y: n.y * (POL_NODE_H + POL_ROW_GAP),
     });
   });
   return {
     positions,
-    totalW: (maxX + 1) * (NODE_W + COL_GAP),
-    totalH: (maxY + 1) * (NODE_H + ROW_GAP),
+    totalW: (maxX + 1) * (POL_NODE_W + POL_COL_GAP),
+    totalH: (maxY + 1) * (POL_NODE_H + POL_ROW_GAP),
   };
 }
 
-// Political path choice screen shown when sp0 is completed and no path chosen yet
-function PoliticalChoiceScreen({
-  onChoose,
-}: {
-  onChoose: (path: PoliticalPath) => void;
-}) {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-8 p-8" style={{ background: '#08100a' }}>
-      <div className="text-center">
-        <div className="text-xs uppercase tracking-widest mb-2" style={{ color: '#bf8a30' }}>IDEOLOGICAL CROSSROADS</div>
-        <h3 className="text-2xl font-bold uppercase tracking-widest mb-3" style={{ color: '#e6c060', textShadow: '0 0 20px rgba(230,192,96,0.3)' }}>
-          Choose the Soviet Path
-        </h3>
-        <p className="text-sm max-w-xl leading-relaxed" style={{ color: '#5a6a5a' }}>
-          The direction of the Soviet state must be decided. This choice is permanent and will define your political strategy for the remainder of the Cold War.
-        </p>
-      </div>
-
-      <div className="flex gap-8">
-        {/* Stalinist path */}
-        <button
-          onClick={() => onChoose('stalinist')}
-          className="flex flex-col gap-3 p-6 border-2 text-left transition-all duration-200 hover:scale-105"
-          style={{ width: 280, borderColor: '#8a1a1a', background: '#1a0808', boxShadow: '0 0 20px rgba(138,26,26,0.2)' }}
-        >
-          <div className="text-3xl text-center" style={{ color: '#ff4444' }}>☭</div>
-          <div className="text-lg font-bold uppercase tracking-widest" style={{ color: '#ff6666' }}>STALINIST PATH</div>
-          <div className="text-xs leading-relaxed" style={{ color: '#8a5a5a' }}>
-            Rule through fear and iron discipline. Purges, collectivization, and the cult of personality. High tension but overwhelming military and economic power. Leads to the non-historical Stalinist World Order victory.
-          </div>
-          <div className="flex flex-col gap-1 mt-2">
-            <div className="text-xs" style={{ color: '#bf4a4a' }}>+ Strong GDP & Military</div>
-            <div className="text-xs" style={{ color: '#bf4a4a' }}>+ Nuclear superiority</div>
-            <div className="text-xs" style={{ color: '#ff9944' }}>– High tension risk</div>
-            <div className="text-xs" style={{ color: '#ff9944' }}>– Alienates neutral nations</div>
-          </div>
-        </button>
-
-        {/* Reformist path */}
-        <button
-          onClick={() => onChoose('reformist')}
-          className="flex flex-col gap-3 p-6 border-2 text-left transition-all duration-200 hover:scale-105"
-          style={{ width: 280, borderColor: '#1a5a3a', background: '#081a10', boxShadow: '0 0 20px rgba(26,90,58,0.2)' }}
-        >
-          <div className="text-3xl text-center" style={{ color: '#4ab84a' }}>☀</div>
-          <div className="text-lg font-bold uppercase tracking-widest" style={{ color: '#4ab84a' }}>REFORMIST PATH</div>
-          <div className="text-xs leading-relaxed" style={{ color: '#4a6a4a' }}>
-            Glasnost, Perestroika, and de-Stalinization. Build soft power through diplomacy, economic openness, and arms reduction. Lower tension but slower military growth. Leads to the New Soviet Century victory.
-          </div>
-          <div className="flex flex-col gap-1 mt-2">
-            <div className="text-xs" style={{ color: '#4ab84a' }}>+ Tension reduction</div>
-            <div className="text-xs" style={{ color: '#4ab84a' }}>+ Diplomatic prestige</div>
-            <div className="text-xs" style={{ color: '#bf9944' }}>– Weaker military</div>
-            <div className="text-xs" style={{ color: '#bf9944' }}>– Slower economic growth</div>
-          </div>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Scrollable canvas for a single tab's focus tree
-function TreeCanvas({
-  nodes, tree, color, onStartFocus,
+function PoliticalCanvas({
+  nodes, tree, onStartFocus,
 }: {
   nodes: FocusNode[];
   tree: FocusTreeType;
-  color: { bg: string; border: string; text: string };
   onStartFocus: (id: string) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, scrollX: 0, scrollY: 0 });
 
-  const { positions, totalW, totalH } = buildPositions(nodes, 4);
-  const canvasW = totalW + COL_GAP;
-  const canvasH = totalH + ROW_GAP + 40;
+  const { positions, totalW, totalH } = buildPolPositions(nodes);
+  const canvasW = totalW + POL_COL_GAP;
+  const canvasH = totalH + POL_ROW_GAP + 40;
 
   function onMouseDown(e: React.MouseEvent) {
     if ((e.target as HTMLElement).closest('[data-node]')) return;
@@ -279,21 +333,15 @@ function TreeCanvas({
       onMouseLeave={onMouseUp}
     >
       <div style={{ width: canvasW, height: canvasH, position: 'relative', minWidth: '100%', minHeight: '100%' }}>
-        {/* SVG connector lines */}
         <svg style={{ position: 'absolute', top: 0, left: 0, width: canvasW, height: canvasH, pointerEvents: 'none' }}>
-          <ConnectorLines nodes={nodes} positions={positions} color={color.text} />
+          <PolConnectorLines nodes={nodes} positions={positions} />
         </svg>
-        {/* Nodes */}
         {nodes.map(node => {
           const pos = positions.get(node.id);
           if (!pos) return null;
           return (
-            <div
-              key={node.id}
-              data-node="true"
-              style={{ position: 'absolute', left: pos.x, top: pos.y }}
-            >
-              <NodeCard node={node} tree={tree} color={color} onStartFocus={onStartFocus} />
+            <div key={node.id} data-node="true" style={{ position: 'absolute', left: pos.x, top: pos.y }}>
+              <PolNodeCard node={node} tree={tree} onStartFocus={onStartFocus} />
             </div>
           );
         })}
@@ -302,7 +350,58 @@ function TreeCanvas({
   );
 }
 
-// Political tab: shows choice screen OR the political tree (split by path)
+function PoliticalChoiceScreen({ onChoose }: { onChoose: (path: PoliticalPath) => void }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-8 p-8" style={{ background: '#08100a' }}>
+      <div className="text-center">
+        <div className="text-xs uppercase tracking-widest mb-2" style={{ color: '#bf8a30' }}>IDEOLOGICAL CROSSROADS</div>
+        <h3 className="text-2xl font-bold uppercase tracking-widest mb-3" style={{ color: '#e6c060', textShadow: '0 0 20px rgba(230,192,96,0.3)' }}>
+          Choose the Soviet Path
+        </h3>
+        <p className="text-sm max-w-xl leading-relaxed" style={{ color: '#5a6a5a' }}>
+          The direction of the Soviet state must be decided. This choice is permanent and will define your political strategy for the remainder of the Cold War.
+        </p>
+      </div>
+      <div className="flex gap-8">
+        <button
+          onClick={() => onChoose('stalinist')}
+          className="flex flex-col gap-3 p-6 border-2 text-left transition-all duration-200 hover:scale-105"
+          style={{ width: 280, borderColor: '#8a1a1a', background: '#1a0808', boxShadow: '0 0 20px rgba(138,26,26,0.2)' }}
+        >
+          <div className="text-3xl text-center" style={{ color: '#ff4444' }}>☭</div>
+          <div className="text-lg font-bold uppercase tracking-widest" style={{ color: '#ff6666' }}>STALINIST PATH</div>
+          <div className="text-xs leading-relaxed" style={{ color: '#8a5a5a' }}>
+            Rule through fear and iron discipline. Purges, collectivization, and the cult of personality. High tension but overwhelming military and economic power.
+          </div>
+          <div className="flex flex-col gap-1 mt-2">
+            <div className="text-xs" style={{ color: '#bf4a4a' }}>+ Strong GDP & Military</div>
+            <div className="text-xs" style={{ color: '#bf4a4a' }}>+ Nuclear superiority</div>
+            <div className="text-xs" style={{ color: '#ff9944' }}>– High tension risk</div>
+            <div className="text-xs" style={{ color: '#ff9944' }}>– Alienates neutral nations</div>
+          </div>
+        </button>
+        <button
+          onClick={() => onChoose('reformist')}
+          className="flex flex-col gap-3 p-6 border-2 text-left transition-all duration-200 hover:scale-105"
+          style={{ width: 280, borderColor: '#1a5a3a', background: '#081a10', boxShadow: '0 0 20px rgba(26,90,58,0.2)' }}
+        >
+          <div className="text-3xl text-center" style={{ color: '#4ab84a' }}>☀</div>
+          <div className="text-lg font-bold uppercase tracking-widest" style={{ color: '#4ab84a' }}>REFORMIST PATH</div>
+          <div className="text-xs leading-relaxed" style={{ color: '#4a6a4a' }}>
+            Glasnost, Perestroika, and de-Stalinization. Build soft power through diplomacy, economic openness, and arms reduction. Lower tension but slower military growth.
+          </div>
+          <div className="flex flex-col gap-1 mt-2">
+            <div className="text-xs" style={{ color: '#4ab84a' }}>+ Tension reduction</div>
+            <div className="text-xs" style={{ color: '#4ab84a' }}>+ Diplomatic prestige</div>
+            <div className="text-xs" style={{ color: '#bf9944' }}>– Weaker military</div>
+            <div className="text-xs" style={{ color: '#bf9944' }}>– Slower economic growth</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function PoliticalTab({
   tree, onStartFocus, onChoosePoliticalPath,
 }: {
@@ -310,26 +409,20 @@ function PoliticalTab({
   onStartFocus: (id: string) => void;
   onChoosePoliticalPath?: (path: PoliticalPath) => void;
 }) {
-  const color = TAB_CONFIG.find(t => t.id === 'political')!.color;
   const sp0 = tree.nodes.find(n => n.id === 'sp0');
   const sp0Done = sp0?.status === 'completed';
   const pathChosen = !!tree.politicalPath;
 
-  // Show choice screen when sp0 done but no path chosen yet
   if (sp0Done && !pathChosen && onChoosePoliticalPath) {
     return <PoliticalChoiceScreen onChoose={onChoosePoliticalPath} />;
   }
 
-  // Build layout: shared root + chosen path nodes
   const allPolitical = tree.nodes.filter(n => n.category === 'political');
-
-  // When path chosen, show only that path (+ shared root)
   const visibleNodes = pathChosen
     ? allPolitical.filter(n => n.id === 'sp0' || (tree.politicalPath === 'stalinist' ? n.id.startsWith('sp_s') : n.id.startsWith('sp_r')))
     : allPolitical.filter(n => n.id === 'sp0');
 
-  // Remap x coords for clean display when only one path is visible
-  const remapped = visibleNodes.map((n, _) => {
+  const remapped = visibleNodes.map(n => {
     if (n.id === 'sp0') return { ...n, x: 0, y: 0 };
     return { ...n, x: 0 };
   });
@@ -339,31 +432,34 @@ function PoliticalTab({
                   : 'CHOOSE YOUR PATH';
   const pathColor = tree.politicalPath === 'stalinist' ? '#ff6666'
                   : tree.politicalPath === 'reformist'  ? '#4ab84a'
-                  : color.text;
+                  : '#bf8a30';
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="flex items-center gap-4 px-4 py-2 border-b shrink-0" style={{ borderColor: color.border }}>
+      <div className="flex items-center gap-4 px-6 py-2 border-b shrink-0" style={{ borderColor: '#3a2a0d' }}>
         <span className="text-xs font-bold uppercase tracking-widest" style={{ color: pathColor }}>{pathLabel}</span>
         {!pathChosen && sp0 && sp0.status !== 'completed' && (
-          <span className="text-xs" style={{ color: '#5a5a5a' }}>
+          <span className="text-xs" style={{ color: '#4a4a3a' }}>
             Complete "Ideological Direction" to unlock path choice
           </span>
         )}
+        {pathChosen && (
+          <span className="text-xs" style={{ color: '#4a4a3a' }}>DRAG OR SCROLL TO NAVIGATE</span>
+        )}
       </div>
-      <TreeCanvas nodes={remapped} tree={tree} color={{ ...color, text: pathColor || color.text }} onStartFocus={onStartFocus} />
+      <PoliticalCanvas nodes={remapped} tree={tree} onStartFocus={onStartFocus} />
     </div>
   );
 }
+
+// --- Main FocusTree component ---
 
 export function FocusTree({ tree, playerFaction, onClose, onStartFocus, onChoosePoliticalPath }: FocusTreeProps) {
   const [activeTab, setActiveTab] = useState<Tab>('economic');
   const tabConfig = TAB_CONFIG.find(t => t.id === activeTab)!;
 
   const activeNode = tree.activeNodeId ? tree.nodes.find(n => n.id === tree.activeNodeId) : null;
-
-  // For non-political tabs, filter and display nodes
-  const tabNodes = tree.nodes.filter(n => n.category === activeTab);
+  const tabNodes = tree.nodes.filter(n => n.category === (activeTab as FocusCategory));
 
   return (
     <div className="fixed inset-0 bg-black/92 z-50 flex flex-col overflow-hidden" style={{ fontFamily: 'Space Mono, monospace' }}>
@@ -378,13 +474,12 @@ export function FocusTree({ tree, playerFaction, onClose, onStartFocus, onChoose
           </span>
         </div>
         <div className="flex items-center gap-6">
-          {activeNode && (
+          {activeNode ? (
             <div className="text-xs" style={{ color: '#ffdd44' }}>
               ACTIVE: <span className="font-bold">{activeNode.name}</span>
               <span className="ml-2" style={{ color: '#4a5a4a' }}>({activeNode.turnsRemaining} turns left)</span>
             </div>
-          )}
-          {!activeNode && (
+          ) : (
             <div className="text-xs" style={{ color: '#3a4a3a' }}>No active focus</div>
           )}
           <button
@@ -400,10 +495,11 @@ export function FocusTree({ tree, playerFaction, onClose, onStartFocus, onChoose
       {/* Tab bar */}
       <div className="flex border-b shrink-0" style={{ borderColor: '#1a2a1a', background: '#060e06' }}>
         {TAB_CONFIG.map(tab => {
-          // Only show Political tab for USSR
           if (tab.id === 'political' && playerFaction !== 'ussr') return null;
           const isActive = activeTab === tab.id;
-          const hasPoliticalChoice = tab.id === 'political' && !!tree.nodes.find(n => n.id === 'sp0' && n.status === 'completed') && !tree.politicalPath;
+          const hasPoliticalAlert = tab.id === 'political'
+            && !!tree.nodes.find(n => n.id === 'sp0' && n.status === 'completed')
+            && !tree.politicalPath;
           return (
             <button
               key={tab.id}
@@ -411,12 +507,12 @@ export function FocusTree({ tree, playerFaction, onClose, onStartFocus, onChoose
               className="flex-1 py-2 text-xs font-bold uppercase tracking-widest transition-colors relative"
               style={{
                 background: isActive ? tab.color.bg : 'transparent',
-                color: isActive ? tab.color.text : '#3a4a3a',
-                borderBottom: isActive ? `2px solid ${tab.color.text}` : '2px solid transparent',
+                color: isActive ? tab.color.accent : '#3a4a3a',
+                borderBottom: isActive ? `2px solid ${tab.color.accent}` : '2px solid transparent',
               }}
             >
               {tab.label}
-              {hasPoliticalChoice && (
+              {hasPoliticalAlert && (
                 <span className="ml-1 text-xs" style={{ color: '#ffdd44' }}>●</span>
               )}
             </button>
@@ -424,16 +520,11 @@ export function FocusTree({ tree, playerFaction, onClose, onStartFocus, onChoose
         })}
       </div>
 
-      {/* Scroll hint */}
-      <div className="px-6 py-1.5 text-xs shrink-0 border-b" style={{ borderColor: '#0d1a0d', color: '#2a3a2a', background: '#060e06' }}>
-        DRAG OR SCROLL TO NAVIGATE · CLICK AVAILABLE NODE TO START RESEARCH
-      </div>
-
       {/* Content */}
       {activeTab === 'political' ? (
         <PoliticalTab tree={tree} onStartFocus={onStartFocus} onChoosePoliticalPath={onChoosePoliticalPath} />
       ) : (
-        <TreeCanvas
+        <StaticTreePanel
           nodes={tabNodes}
           tree={tree}
           color={tabConfig.color}
