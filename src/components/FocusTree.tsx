@@ -371,7 +371,7 @@ function PoliticalChoiceScreen({ onChoose }: { onChoose: (path: PoliticalPath) =
           <div className="text-2xl text-center w-full" style={{ color: '#ff4444' }}>☭</div>
           <div className="text-sm font-bold uppercase tracking-widest" style={{ color: '#ff6666' }}>STALINIST</div>
           <div className="text-xs leading-relaxed" style={{ color: '#7a4a4a' }}>
-            Rule through fear and iron discipline. Overwhelming military power at the cost of high tension.
+            With Stalin as our guide, we will overcome all! Overwhelming military power at the cost of high tension.
           </div>
           <div className="flex flex-col gap-0.5 mt-1">
             <div className="text-xs" style={{ color: '#bf4a4a' }}>+ Strong GDP & Military</div>
@@ -387,7 +387,7 @@ function PoliticalChoiceScreen({ onChoose }: { onChoose: (path: PoliticalPath) =
           <div className="text-2xl text-center w-full" style={{ color: '#4ab84a' }}>☀</div>
           <div className="text-sm font-bold uppercase tracking-widest" style={{ color: '#4ab84a' }}>REFORMIST</div>
           <div className="text-xs leading-relaxed" style={{ color: '#3a5a3a' }}>
-            Glasnost and Perestroika. Build soft power through diplomacy and economic openness.
+            The Soviet State requires reform. Build soft power through diplomacy and economic openness.
           </div>
           <div className="flex flex-col gap-0.5 mt-1">
             <div className="text-xs" style={{ color: '#4ab84a' }}>+ Tension reduction</div>
