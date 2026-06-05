@@ -1,7 +1,8 @@
 export type Faction = 'usa' | 'ussr';
 export type Alignment = 'nato' | 'warsaw' | 'nonaligned' | 'communist' | 'western' | 'occupied';
 export type UnitType = 'infantry' | 'armor' | 'air' | 'navy';
-export type FocusCategory = 'economic' | 'military' | 'intelligence';
+export type FocusCategory = 'economic' | 'military' | 'intelligence' | 'political';
+export type PoliticalPath = 'stalinist' | 'reformist' | null;
 export type FocusStatus = 'locked' | 'available' | 'researching' | 'completed';
 export type TabName = 'intel' | 'units' | 'economy' | 'focus';
 
@@ -63,6 +64,7 @@ export interface FocusTree {
   faction: Faction;
   nodes: FocusNode[];
   activeNodeId: string | null;
+  politicalPath: PoliticalPath;
 }
 
 export interface UnitBuild {

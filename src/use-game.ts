@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { GameState, Faction, UnitType, CombatResult, EventChoice, FocusTree, FocusNode, Unit, ChinaCivilWar, Country } from './lib/types';
+import { GameState, Faction, UnitType, CombatResult, EventChoice, FocusTree, FocusNode, Unit, ChinaCivilWar, Country, PoliticalPath } from './lib/types';
 import { INITIAL_STATE, EVENTS, UNIT_TYPES, getUnitBuild, CHINA_COMMUNIST_ADVANCE_ORDER, CHINA_NATIONALIST_ADVANCE_ORDER } from './lib/constants';
 
 function resolveFocusNode(node: FocusNode, player: Faction, stats: GameState['usaStats']): GameState['usaStats'] {
@@ -407,16 +407,31 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
           const resolvedStats = resolveFocusNode(justCompleted, faction, stats);
           if (faction === 'usa') { nextUSA.gdp = resolvedStats.gdp; nextUSA.prestige = resolvedStats.prestige; nextUSA.military = resolvedStats.military; nextUSA.nuclearWarheads = resolvedStats.nuclearWarheads; nextUSA.researchPoints = resolvedStats.researchPoints; }
           else { nextUSSR.gdp = resolvedStats.gdp; nextUSSR.prestige = resolvedStats.prestige; nextUSSR.military = resolvedStats.military; nextUSSR.nuclearWarheads = resolvedStats.nuclearWarheads; nextUSSR.researchPoints = resolvedStats.researchPoints; }
-          // Non-historical Stalinist World Order victory: completing sni2 wins the game for USSR
-          if (justCompleted.id === 'sni2' && state.playerFaction === 'ussr' && newStatus !== 'gameover') {
+          // Non-historical Stalinist World Order victory: completing sp_s11 wins the game for USSR
+          if (justCompleted.id === 'sp_s11' && state.playerFaction === 'ussr' && newStatus !== 'gameover') {
             newStatus = 'gameover';
             winner = 'ussr';
             reason = 'STALINIST WORLD ORDER — Communist revolution sweeps the globe. The Soviet Union achieves total ideological dominance.';
           }
+          // Reformist victory: completing sp_r9 wins for USSR via soft power
+          if (justCompleted.id === 'sp_r9' && state.playerFaction === 'ussr' && newStatus !== 'gameover') {
+            newStatus = 'gameover';
+            winner = 'ussr';
+            reason = 'NEW SOVIET CENTURY — A reformed Soviet state leads the world through diplomacy and economic might. Soft power victory.';
+          }
         }
-        // Unlock prerequisites
+        // Unlock prerequisites — political path nodes gated by politicalPath choice
+        const currentPoliticalPath = tree.politicalPath;
         const updatedNodes = updated.map(n => {
           if (n.status === 'locked') {
+            // Block nodes of the opposing political path entirely
+            if (n.category === 'political' && n.id !== 'sp0') {
+              const isStalinist = n.id.startsWith('sp_s');
+              const isReformist = n.id.startsWith('sp_r');
+              if (currentPoliticalPath === 'stalinist' && isReformist) return n;
+              if (currentPoliticalPath === 'reformist' && isStalinist) return n;
+              if (!currentPoliticalPath && (isStalinist || isReformist)) return n;
+            }
             const prereqsMet = n.prerequisites.every(pid => updated.find(x => x.id === pid)?.status === 'completed');
             if (prereqsMet) return { ...n, status: 'available' as const };
           }
@@ -786,6 +801,36 @@ export function useGameState() {
     setState(s => ({ ...s, combatResult: null }));
   }, []);
 
+  const choosePoliticalPath = useCallback((path: PoliticalPath) => {
+    setState(s => {
+      if (!s.playerFaction) return s;
+      const tree = s.focusTrees[s.playerFaction];
+      // Can only choose if sp0 is completed and no path chosen yet
+      const sp0 = tree.nodes.find(n => n.id === 'sp0');
+      if (!sp0 || sp0.status !== 'completed' || tree.politicalPath) return s;
+      // Unlock the first node of the chosen path
+      const updatedNodes = tree.nodes.map(n => {
+        const isStalinist = n.id.startsWith('sp_s');
+        const isReformist = n.id.startsWith('sp_r');
+        if (path === 'stalinist' && isReformist) return n;
+        if (path === 'reformist' && isStalinist) return n;
+        if (n.status === 'locked') {
+          const prereqsMet = n.prerequisites.every(pid => tree.nodes.find(x => x.id === pid)?.status === 'completed');
+          if (prereqsMet) return { ...n, status: 'available' as const };
+        }
+        return n;
+      });
+      return {
+        ...s,
+        focusTrees: {
+          ...s.focusTrees,
+          [s.playerFaction]: { ...tree, nodes: updatedNodes, politicalPath: path },
+        },
+        logs: [...s.logs, `Political path chosen: ${path === 'stalinist' ? 'STALINIST' : 'REFORMIST'}`],
+      };
+    });
+  }, []);
+
   return {
     state,
     startGame,
@@ -797,5 +842,6 @@ export function useGameState() {
     performAction,
     startFocus,
     dismissCombat,
+    choosePoliticalPath,
   };
 }

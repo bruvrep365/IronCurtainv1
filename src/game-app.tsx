@@ -12,7 +12,7 @@ import { TabName } from './lib/types';
 export function GameApp() {
   const {
     state, startGame, selectCountry, selectUnit, setTab, endTurn,
-    resolveEvent, performAction, startFocus, dismissCombat,
+    resolveEvent, performAction, startFocus, dismissCombat, choosePoliticalPath,
   } = useGameState();
   const [showFocusTree, setShowFocusTree] = useState(false);
 
@@ -442,6 +442,7 @@ export function GameApp() {
           playerFaction={state.playerFaction}
           onClose={() => setShowFocusTree(false)}
           onStartFocus={startFocus}
+          onChoosePoliticalPath={choosePoliticalPath}
         />
       )}
     </div>
