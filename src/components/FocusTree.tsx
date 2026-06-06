@@ -85,7 +85,7 @@ function StaticNode({
         padding: '7px 10px',
         boxShadow: isAvailable ? `0 0 10px ${color.border}44` : isActive ? `0 0 12px rgba(255,221,68,0.25)` : 'none',
       }}
-      onClick={() => canStart && onStartFocus(node.id)}
+      onClick={() => onStartFocus(node.id)}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -209,7 +209,7 @@ function PolNodeCard({
         boxShadow: isAvailable && !isLocked ? `0 0 12px ${pathColor.border}66, inset 0 0 8px ${pathColor.border}33` : isActive ? `0 0 16px rgba(255,221,68,0.35)` : 'none',
         borderRadius: '4px',
       }}
-      onClick={() => canStart && onStartFocus(node.id)}
+      onClick={() => onStartFocus(node.id)}
     >
       <div className="text-center w-full">
         <div className="text-xs font-bold uppercase tracking-wide leading-tight" style={{ color: isCompleted ? pathColor.accent : isLocked ? '#3a4a3a' : '#aacaaa', marginBottom: '2px' }}>
@@ -442,10 +442,197 @@ function PoliticalTab({
   );
 }
 
+// --- Focus Detail Modal ---
+
+function FocusDetailModal({
+  node,
+  tree,
+  onClose,
+  onActivate,
+}: {
+  node: FocusNode;
+  tree: FocusTreeType;
+  onClose: () => void;
+  onActivate: (nodeId: string) => void;
+}) {
+  const isLocked = node.status === 'locked';
+  const isAvailable = node.status === 'available';
+  const isResearching = node.status === 'researching';
+  const isCompleted = node.status === 'completed';
+  const canActivate = isAvailable && !tree.activeNodeId;
+
+  const preqNodes = node.prerequisites.map(id => tree.nodes.find(n => n.id === id)).filter(Boolean) as FocusNode[];
+  const unmetPreqs = preqNodes.filter(n => n.status !== 'completed');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.85)' }}>
+      <div
+        className="border-2 rounded-lg overflow-hidden flex flex-col w-full max-w-2xl max-h-[80vh]"
+        style={{ borderColor: '#3a5a3a', background: '#0a1a0a' }}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 px-6 py-4 border-b" style={{ borderColor: '#1a3a1a', background: '#030a03' }}>
+          <div className="flex items-start gap-4 flex-1">
+            <div className="text-4xl" style={{ opacity: 0.7 }}>
+              {node.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-2xl font-bold uppercase tracking-widest mb-2" style={{ color: '#00e676' }}>
+                {node.name}
+              </h2>
+              <div className="flex flex-wrap gap-2 text-xs mb-2">
+                <span
+                  className="px-2 py-1 rounded"
+                  style={{
+                    color: node.category === 'economic' ? '#4ab84a'
+                         : node.category === 'military' ? '#4a7abf'
+                         : node.category === 'intelligence' ? '#8a4abf'
+                         : '#bf8a30',
+                    background:
+                      node.category === 'economic' ? '#0d2a0d'
+                      : node.category === 'military' ? '#0d1a2a'
+                      : node.category === 'intelligence' ? '#1a0d2a'
+                      : '#2a1a0d',
+                    border:
+                      node.category === 'economic' ? '1px solid #1a5a1a'
+                      : node.category === 'military' ? '1px solid #1a3a5a'
+                      : node.category === 'intelligence' ? '1px solid #3a1a5a'
+                      : '1px solid #5a3a1a',
+                  }}
+                >
+                  {node.category.toUpperCase()}
+                </span>
+                <span className="px-2 py-1 rounded" style={{ color: STATUS_COLORS[node.status], background: STATUS_COLORS[node.status] + '18', border: `1px solid ${STATUS_COLORS[node.status]}44` }}>
+                  {node.status === 'locked' ? 'LOCKED'
+                   : node.status === 'available' ? 'AVAILABLE'
+                   : node.status === 'researching' ? `RESEARCHING (${node.turnsRemaining}/${node.turnsRequired} turns)`
+                   : 'COMPLETED'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="shrink-0 w-8 h-8 flex items-center justify-center rounded border transition-colors hover:bg-white/10"
+            style={{ borderColor: '#3a5a3a', color: '#4a8a4a' }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
+          {/* Description */}
+          <div>
+            <p className="text-sm leading-relaxed" style={{ color: '#aacaaa' }}>
+              {node.description}
+            </p>
+          </div>
+
+          {/* Requirements */}
+          {node.prerequisites.length > 0 && (
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#bf8a30' }}>
+                Prerequisites
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {preqNodes.map(n => (
+                  <div
+                    key={n.id}
+                    className="text-xs px-2 py-1 rounded"
+                    style={{
+                      color: n.status === 'completed' ? '#00e676' : '#8a8a7a',
+                      background: n.status === 'completed' ? '#00e67618' : '#3a3a3a18',
+                      border: `1px solid ${n.status === 'completed' ? '#00e67644' : '#3a3a3a44'}`,
+                    }}
+                  >
+                    {n.status === 'completed' ? '✓' : '✕'} {n.name}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Effects */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: '#bf8a30' }}>
+              Effects
+            </h3>
+            <div className="bg-black/30 rounded p-3 border" style={{ borderColor: '#1a3a1a' }}>
+              {Object.entries(node.effects).length === 0 ? (
+                <p className="text-xs" style={{ color: '#4a5a4a' }}>No direct effects.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {node.effects.gdp && <span className="text-xs px-2 py-1 rounded" style={{ color: '#4ab84a', background: '#0d2a0d', border: '1px solid #1a5a1a' }}>GDP +{node.effects.gdp}</span>}
+                  {node.effects.military && <span className="text-xs px-2 py-1 rounded" style={{ color: '#4a7abf', background: '#0d1a2a', border: '1px solid #1a3a5a' }}>MILITARY +{node.effects.military}</span>}
+                  {node.effects.prestige && <span className="text-xs px-2 py-1 rounded" style={{ color: '#e6c060', background: '#2a1a0d', border: '1px solid #5a3a1a' }}>PRESTIGE +{node.effects.prestige}</span>}
+                  {node.effects.tension !== undefined && (
+                    <span className="text-xs px-2 py-1 rounded" style={{ color: node.effects.tension > 0 ? '#ff6666' : '#4ab84a', background: node.effects.tension > 0 ? '#2a0808' : '#0d2a0d', border: `1px solid ${node.effects.tension > 0 ? '#8a1a1a' : '#1a5a1a'}` }}>
+                      TENSION {node.effects.tension > 0 ? '+' : ''}{node.effects.tension}
+                    </span>
+                  )}
+                  {node.effects.nuclearWarheads && <span className="text-xs px-2 py-1 rounded" style={{ color: '#ff4444', background: '#2a0808', border: '1px solid #8a1a1a' }}>NUKES +{node.effects.nuclearWarheads}</span>}
+                  {node.effects.researchPoints && <span className="text-xs px-2 py-1 rounded" style={{ color: '#8a4abf', background: '#1a0d2a', border: '1px solid #3a1a5a' }}>RESEARCH +{node.effects.researchPoints}</span>}
+                  {node.effects.unlockUnit && <span className="text-xs px-2 py-1 rounded" style={{ color: '#4a7abf', background: '#0d1a2a', border: '1px solid #1a3a5a' }}>UNLOCK {node.effects.unlockUnit.toUpperCase()}</span>}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Unmet Prerequisites Warning */}
+          {isLocked && unmetPreqs.length > 0 && (
+            <div className="bg-red-950/30 rounded p-3 border" style={{ borderColor: '#8a1a1a' }}>
+              <p className="text-xs font-bold" style={{ color: '#ff6666' }}>
+                REQUIRES:
+              </p>
+              <ul className="text-xs mt-1" style={{ color: '#8a5a5a' }}>
+                {unmetPreqs.map(n => (
+                  <li key={n.id}>• {n.name}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex gap-3 px-6 py-4 border-t" style={{ borderColor: '#1a3a1a', background: '#030a03' }}>
+          <div className="flex-1 text-left">
+            {!isCompleted && (
+              <div className="text-xs" style={{ color: '#4a5a4a' }}>
+                <strong style={{ color: '#aacaaa' }}>{node.turnsRequired}</strong> turns to complete
+              </div>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border text-xs font-bold uppercase tracking-widest transition-colors"
+            style={{ borderColor: '#1a3a1a', color: '#4a8a4a', background: '#0d1a0d' }}
+          >
+            CLOSE
+          </button>
+          {canActivate && (
+            <button
+              onClick={() => {
+                onActivate(node.id);
+                onClose();
+              }}
+              className="px-4 py-2 border text-xs font-bold uppercase tracking-widest transition-colors"
+              style={{ borderColor: '#1a5a1a', color: '#00e676', background: '#0d2a0d' }}
+            >
+              START FOCUS
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- Main FocusTree component ---
 
 export function FocusTree({ tree, playerFaction, onClose, onStartFocus, onChoosePoliticalPath }: FocusTreeProps) {
   const [activeTab, setActiveTab] = useState<Tab>('economic');
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const tabConfig = TAB_CONFIG.find(t => t.id === activeTab)!;
 
   const activeNode = tree.activeNodeId ? tree.nodes.find(n => n.id === tree.activeNodeId) : null;
@@ -512,13 +699,23 @@ export function FocusTree({ tree, playerFaction, onClose, onStartFocus, onChoose
 
       {/* Content */}
       {activeTab === 'political' ? (
-        <PoliticalTab tree={tree} onStartFocus={onStartFocus} onChoosePoliticalPath={onChoosePoliticalPath} />
+        <PoliticalTab tree={tree} onStartFocus={(nodeId) => setSelectedNodeId(nodeId)} onChoosePoliticalPath={onChoosePoliticalPath} />
       ) : (
         <StaticTreePanel
           nodes={tabNodes}
           tree={tree}
           color={tabConfig.color}
-          onStartFocus={onStartFocus}
+          onStartFocus={(nodeId) => setSelectedNodeId(nodeId)}
+        />
+      )}
+
+      {/* Detail Modal */}
+      {selectedNodeId && (
+        <FocusDetailModal
+          node={tree.nodes.find(n => n.id === selectedNodeId)!}
+          tree={tree}
+          onClose={() => setSelectedNodeId(null)}
+          onActivate={onStartFocus}
         />
       )}
     </div>
