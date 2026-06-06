@@ -535,7 +535,6 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
               const isReformist = n.id.startsWith('sp_r');
               if (currentPoliticalPath === 'stalinist' && isReformist) return n;
               if (currentPoliticalPath === 'reformist' && isStalinist) return n;
-              if (!currentPoliticalPath && (isStalinist || isReformist)) return n;
             }
             const prereqsMet = n.prerequisites.every(pid => updated.find(x => x.id === pid)?.status === 'completed');
             if (prereqsMet) return { ...n, status: 'available' as const };
@@ -972,7 +971,7 @@ export function useGameState() {
       const node = tree.nodes.find(n => n.id === nodeId);
       if (!node || node.status !== 'available') return s;
       if (tree.activeNodeId) return s;
-
+      
       // Auto-lock political path when starting sp_s1 or sp_r1
       let updatedTree = { ...tree };
       const sp0 = tree.nodes.find(n => n.id === 'sp0');
@@ -984,8 +983,10 @@ export function useGameState() {
         const updatedNodes = tree.nodes.map(n => {
           const isStalinist = n.id.startsWith('sp_s');
           const isReformist = n.id.startsWith('sp_r');
-          if (pathToChoose === 'stalinist' && isReformist) return n;
-          if (pathToChoose === 'reformist' && isStalinist) return n;
+          const isOpposing =
+            (pathToChoose === 'stalinist' && isReformist) ||
+            (pathToChoose === 'reformist' && isStalinist);
+          if (isOpposing) return { ...n, status: 'locked' as const }; // lock the rejected path
           if (n.status === 'locked') {
             const prereqsMet = n.prerequisites.every(pid => tree.nodes.find(x => x.id === pid)?.status === 'completed');
             if (prereqsMet) return { ...n, status: 'available' as const };
