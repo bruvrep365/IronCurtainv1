@@ -166,10 +166,10 @@ function StaticTreePanel({
 
 // --- Political subtree (draggable canvas + choice screen) ---
 
-const POL_NODE_W = 190;
-const POL_NODE_H = 95;
-const POL_COL_GAP = 44;
-const POL_ROW_GAP = 20;
+const POL_NODE_W = 160;
+const POL_NODE_H = 85;
+const POL_COL_GAP = 80;
+const POL_ROW_GAP = 80;
 
 function PolNodeCard({
   node, tree, onStartFocus,
@@ -197,42 +197,34 @@ function PolNodeCard({
 
   return (
     <div
-      className="transition-all duration-150 select-none"
+      className="transition-all duration-150 select-none flex flex-col items-center"
       style={{
         width: POL_NODE_W,
         minHeight: POL_NODE_H,
-        border: `1px solid ${borderColor}`,
-        background: isCompleted ? pathColor.bg + 'cc' : isAvailable ? pathColor.bg : '#090909',
-        opacity: isLocked ? 0.4 : 1,
+        border: `2px solid ${borderColor}`,
+        background: isCompleted ? pathColor.bg + 'dd' : isAvailable ? pathColor.bg : '#0a0a0a',
+        opacity: isLocked ? 0.35 : 1,
         cursor: canStart ? 'pointer' : 'default',
-        padding: '8px 10px',
-        boxShadow: isAvailable ? `0 0 8px ${pathColor.border}55` : 'none',
+        padding: '6px 8px',
+        boxShadow: isAvailable && !isLocked ? `0 0 12px ${pathColor.border}66, inset 0 0 8px ${pathColor.border}33` : isActive ? `0 0 16px rgba(255,221,68,0.35)` : 'none',
+        borderRadius: '4px',
       }}
       onClick={() => canStart && onStartFocus(node.id)}
     >
-      <div className="flex items-start justify-between gap-1 mb-1">
-        <span className="text-xs font-bold uppercase tracking-wide leading-tight" style={{ color: isCompleted ? pathColor.accent : '#aacaaa', maxWidth: 130 }}>
+      <div className="text-center w-full">
+        <div className="text-xs font-bold uppercase tracking-wide leading-tight" style={{ color: isCompleted ? pathColor.accent : isLocked ? '#3a4a3a' : '#aacaaa', marginBottom: '2px' }}>
           {node.name}
-        </span>
-        <span className="text-xs shrink-0 font-mono" style={{ color: STATUS_COLORS[node.status] }}>
-          {isCompleted   ? '✓ DONE'
-          : isResearching ? `${node.turnsRemaining}t`
-          : isAvailable   ? 'START'
-          : 'LOCKED'}
-        </span>
+        </div>
+        <div className="text-xs" style={{ color: isLocked ? '#2a3a2a' : '#5a6a5a', lineHeight: '1.2' }}>
+          {node.description.length > 40 ? node.description.substring(0, 37) + '…' : node.description}
+        </div>
       </div>
-      <p className="text-xs leading-snug" style={{ color: '#5a6a5a' }}>{node.description}</p>
-      {node.prerequisites.length > 0 && (
-        <div className="text-xs mt-1" style={{ color: '#3a3a3a' }}>
-          Req: {node.prerequisites.map(p => tree.nodes.find(n => n.id === p)?.name ?? p).join(', ')}
-        </div>
-      )}
-      <EffectTags effects={node.effects} />
-      {canStart && (
-        <div className="text-xs mt-2 font-bold tracking-widest" style={{ color: pathColor.accent }}>
-          [{node.turnsRequired} TURNS] CLICK TO START
-        </div>
-      )}
+      <div className="mt-1 text-xs font-mono" style={{ color: STATUS_COLORS[node.status], fontWeight: 'bold' }}>
+        {isCompleted   ? '✓'
+        : isResearching ? `${node.turnsRemaining}t`
+        : isAvailable   ? '◆'
+        : '✕'}
+      </div>
     </div>
   );
 }
@@ -421,8 +413,8 @@ function PoliticalTab({
     : allPolitical.filter(n => n.id === 'sp0');
 
   const remapped = visibleNodes.map(n => {
-    if (n.id === 'sp0') return { ...n, x: 0, y: 0 };
-    return { ...n, x: 0 };
+    if (n.id === 'sp0') return { ...n, x: 2, y: 0 };
+    return n;
   });
 
   const pathLabel = tree.politicalPath === 'stalinist' ? 'STALINIST PATH'
