@@ -403,23 +403,12 @@ function PoliticalTab({
   const sp0Done = sp0?.status === 'completed';
   const pathChosen = !!tree.politicalPath;
 
-  if (sp0Done && !pathChosen && onChoosePoliticalPath) {
-    return <PoliticalChoiceScreen onChoose={onChoosePoliticalPath} />;
-  }
-
+  // Show all political nodes: sp0 in center, stalinist left, reformist right
   const allPolitical = tree.nodes.filter(n => n.category === 'political');
-  const visibleNodes = pathChosen
-    ? allPolitical.filter(n => n.id === 'sp0' || (tree.politicalPath === 'stalinist' ? n.id.startsWith('sp_s') : n.id.startsWith('sp_r')))
-    : allPolitical.filter(n => n.id === 'sp0');
-
-  const remapped = visibleNodes.map(n => {
-    if (n.id === 'sp0') return { ...n, x: 2, y: 0 };
-    return n;
-  });
 
   const pathLabel = tree.politicalPath === 'stalinist' ? 'STALINIST PATH'
                   : tree.politicalPath === 'reformist'  ? 'REFORMIST PATH'
-                  : 'CHOOSE YOUR PATH';
+                  : 'POLITICAL PATHS';
   const pathColor = tree.politicalPath === 'stalinist' ? '#ff6666'
                   : tree.politicalPath === 'reformist'  ? '#4ab84a'
                   : '#bf8a30';
@@ -428,16 +417,12 @@ function PoliticalTab({
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex items-center gap-4 px-6 py-2 border-b shrink-0" style={{ borderColor: '#3a2a0d' }}>
         <span className="text-xs font-bold uppercase tracking-widest" style={{ color: pathColor }}>{pathLabel}</span>
-        {!pathChosen && sp0 && sp0.status !== 'completed' && (
-          <span className="text-xs" style={{ color: '#4a4a3a' }}>
-            Complete "Ideological Direction" to unlock path choice
-          </span>
-        )}
-        {pathChosen && (
-          <span className="text-xs" style={{ color: '#4a4a3a' }}>DRAG OR SCROLL TO NAVIGATE</span>
+        <span className="text-xs" style={{ color: '#4a4a3a' }}>DRAG OR SCROLL TO NAVIGATE</span>
+        {sp0Done && !pathChosen && (
+          <span className="text-xs" style={{ color: '#ffdd44' }}>→ Click a path to commit</span>
         )}
       </div>
-      <PoliticalCanvas nodes={remapped} tree={tree} onStartFocus={onStartFocus} />
+      <PoliticalCanvas nodes={allPolitical} tree={tree} onStartFocus={onStartFocus} />
     </div>
   );
 }

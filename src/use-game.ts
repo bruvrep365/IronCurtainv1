@@ -781,16 +781,44 @@ export function useGameState() {
   const startFocus = useCallback((nodeId: string) => {
     setState(s => {
       if (!s.playerFaction) return s;
-      const tree = { ...s.focusTrees[s.playerFaction] };
+      const faction = s.playerFaction;
+      const tree = { ...s.focusTrees[faction] };
       const node = tree.nodes.find(n => n.id === nodeId);
       if (!node || node.status !== 'available') return s;
       if (tree.activeNodeId) return s;
-      const updatedNodes = tree.nodes.map(n => n.id === nodeId ? { ...n, status: 'researching' as const } : n);
+
+      // Auto-lock political path when starting sp_s1 or sp_r1
+      let updatedTree = { ...tree };
+      const sp0 = tree.nodes.find(n => n.id === 'sp0');
+      const needsPathChoice = sp0?.status === 'completed' && !tree.politicalPath;
+
+      if (needsPathChoice && (nodeId === 'sp_s1' || nodeId === 'sp_r1')) {
+        const pathToChoose: PoliticalPath = nodeId === 'sp_s1' ? 'stalinist' : 'reformist';
+        // Hide nodes from the unchosen path
+        const updatedNodes = tree.nodes.map(n => {
+          const isStalinist = n.id.startsWith('sp_s');
+          const isReformist = n.id.startsWith('sp_r');
+          if (pathToChoose === 'stalinist' && isReformist) return n;
+          if (pathToChoose === 'reformist' && isStalinist) return n;
+          if (n.status === 'locked') {
+            const prereqsMet = n.prerequisites.every(pid => tree.nodes.find(x => x.id === pid)?.status === 'completed');
+            if (prereqsMet) return { ...n, status: 'available' as const };
+          }
+          return n;
+        });
+        updatedTree = { ...tree, nodes: updatedNodes, politicalPath: pathToChoose };
+        s = {
+          ...s,
+          logs: [...s.logs, `Political path chosen: ${pathToChoose === 'stalinist' ? 'STALINIST' : 'REFORMIST'}`],
+        };
+      }
+
+      const updatedNodes = updatedTree.nodes.map(n => n.id === nodeId ? { ...n, status: 'researching' as const } : n);
       return {
         ...s,
         focusTrees: {
           ...s.focusTrees,
-          [s.playerFaction]: { ...tree, nodes: updatedNodes, activeNodeId: nodeId },
+          [faction]: { ...updatedTree, nodes: updatedNodes, activeNodeId: nodeId },
         },
         logs: [...s.logs, `Focus started: ${node.name} (${node.turnsRequired} turns)`],
       };

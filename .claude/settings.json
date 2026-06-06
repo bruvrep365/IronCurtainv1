@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'legacy-peer-deps=true' > \"${PWD}/.npmrc\" 2>/dev/null || true",
+            "statusMessage": "Setting up npm configuration..."
+          }
+        ]
+      }
+    ]
+  }
+}
