@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { GameState, Faction, UnitType, CombatResult, EventChoice, FocusTree, FocusNode, Unit, ChinaCivilWar, Country, PoliticalPath } from './lib/types';
+import { GameState, Faction, UnitType, CombatResult, EventChoice, FocusTree, FocusNode, Unit, ChinaCivilWar, Country, PoliticalPath, GameEvent, CubanRevolution } from './lib/types';
 import { INITIAL_STATE, EVENTS, UNIT_TYPES, getUnitBuild, CHINA_COMMUNIST_ADVANCE_ORDER, CHINA_NATIONALIST_ADVANCE_ORDER } from './lib/constants';
 
 function resolveFocusNode(node: FocusNode, player: Faction, stats: GameState['usaStats']): GameState['usaStats'] {
@@ -280,6 +280,65 @@ function resolveChinaCivilWar(state: GameState, newYear: number, newMonth: numbe
   return { ccw, newEvent };
 }
 
+function resolveCubanRevolution(state: GameState, newYear: number, newMonth: number): { cubRev: CubanRevolution; newEvent: GameEvent | null } {
+  const cubRev = { ...state.cubanRevolution };
+  let newEvent: GameEvent | null = null;
+
+  // Cuban Revolution runs from July 1953 to January 1960
+  // If it reaches January 1960 without resolving, communists auto-win
+  const revolutionStartYear = 1953;
+  const revolutionStartMonth = 7;
+  const autoWinYear = 1960;
+  const autoWinMonth = 1;
+
+  if (!cubRev.resolved && (newYear > revolutionStartYear || (newYear === revolutionStartYear && newMonth >= revolutionStartMonth))) {
+    cubRev.monthsElapsed += 1;
+
+    // Determine if war should resolve
+    const aidDifference = cubRev.totalCommunistAid - cubRev.totalWesternAid;
+    const roll = Math.random();
+
+    // Higher communist aid makes communist victory more likely
+    const communistWinChance = 0.2 + (aidDifference * 0.05); // 0 difference = 20% communist chance
+
+    if (roll < Math.min(0.9, communistWinChance) || (newYear > autoWinYear || (newYear === autoWinYear && newMonth >= autoWinMonth))) {
+      cubRev.winner = 'communist';
+      cubRev.resolved = true;
+      newEvent = {
+        id: 'cuba_revolution_end',
+        year: newYear,
+        month: newMonth,
+        title: 'Cuban Revolution Victorious',
+        description: 'Fidel Castro\'s revolutionaries have overthrown the government. Cuba is now communist and aligns with the Soviet Union.',
+        faction: 'both',
+        choices: [
+          { id: 'c1', text: 'Accept the outcome', effect: (s: GameState): Partial<GameState> => ({ cubanRevolution: { ...s.cubanRevolution, consolidated: true } }) },
+        ]
+      };
+    } else if (roll > 0.6) {
+      cubRev.winner = 'western';
+      cubRev.resolved = true;
+      newEvent = {
+        id: 'cuba_revolution_end',
+        year: newYear,
+        month: newMonth,
+        title: 'Cuban Revolution Crushed',
+        description: 'Government forces and US-backed troops have defeated Castro\'s rebellion. Cuba remains under Western influence.',
+        faction: 'both',
+        choices: [
+          { id: 'c1', text: 'Consolidate victory', effect: (s: GameState): Partial<GameState> => ({ cubanRevolution: { ...s.cubanRevolution, consolidated: true } }) },
+        ]
+      };
+    }
+  }
+
+  // Reset monthly aid counters
+  cubRev.communistAid = 0;
+  cubRev.westernAid = 0;
+
+  return { cubRev, newEvent };
+}
+
 function resolveTurnEnd(state: GameState): Partial<GameState> {
   const newMonth = (state.month % 12) + 1;
   const newYear = newMonth === 1 ? state.year + 1 : state.year;
@@ -309,7 +368,20 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
   // Resolve the Chinese Civil War for this month
   const { ccw, newEvent: chinaEvent } = resolveChinaCivilWar(state, newYear, newMonth);
 
-  const event = chinaEvent || scheduledEvent;
+  // Resolve the Cuban Revolution for this month
+  const { cubRev, newEvent: cubaEvent } = resolveCubanRevolution(state, newYear, newMonth);
+
+  // Check if we should trigger Cuban Missile Crisis (only if Cuba is communist)
+  let cubanMissileEvent: GameEvent | null = null;
+  if (newYear === 1962 && newMonth === 10) {
+    const cuba = state.countries['cuba'];
+    if (cuba && (cuba.alignment === 'communist' || cubaEvent?.description.includes('communist'))) {
+      // Only trigger CMC if Cuba is communist
+      cubanMissileEvent = EVENTS.find(e => e.id === 'e8') || null;
+    }
+  }
+
+  const event = cubaEvent || chinaEvent || cubanMissileEvent || scheduledEvent;
 
   const nextUSA = { ...state.usaStats, actionPoints: 3 };
   const nextUSSR = { ...state.ussrStats, actionPoints: 3 };
@@ -350,6 +422,39 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
           alignment: winnerAlignment,
           isContested: true,
           influence: ccw.winner === 'communist'
+            ? { usa: loserInfluence, ussr: winnerInfluence }
+            : { usa: winnerInfluence, ussr: loserInfluence },
+        };
+      }
+    }
+  }
+
+  // Apply Cuba alignment changes based on revolution state
+  if (cubRev.resolved) {
+    const c = updatedCountries['cuba'];
+    if (c) {
+      const winnerAlignment: Country['alignment'] = cubRev.winner === 'communist' ? 'communist' : 'western';
+      if (cubRev.consolidated) {
+        // Fully consolidated
+        updatedCountries['cuba'] = {
+          ...c,
+          alignment: winnerAlignment,
+          isContested: false,
+          influence: cubRev.winner === 'communist'
+            ? { usa: 0, ussr: 100 }
+            : { usa: 100, ussr: 0 },
+          stability: Math.min(100, c.stability + 2),
+        };
+      } else {
+        // Still consolidating
+        const consolidationProgress = 0.5;
+        const winnerInfluence = Math.round(50 + consolidationProgress * 50);
+        const loserInfluence = 100 - winnerInfluence;
+        updatedCountries['cuba'] = {
+          ...c,
+          alignment: winnerAlignment,
+          isContested: true,
+          influence: cubRev.winner === 'communist'
             ? { usa: loserInfluence, ussr: winnerInfluence }
             : { usa: winnerInfluence, ussr: loserInfluence },
         };
@@ -505,6 +610,7 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
     focusTrees: updatedTrees,
     buildQueue: remainingQueue,
     chinaCivilWar: ccw,
+    cubanRevolution: cubRev,
     activeEvent: event || null,
     logs: [...state.logs, `[${MONTH_NAMES[newMonth - 1]} ${newYear}] AI opponent takes action. Tension: ${Math.min(100, newTension)}%`],
   };
@@ -587,6 +693,20 @@ export function useGameState() {
         if (targetId) {
           const c = updatedCountries[targetId];
           if (c) {
+            // Check if target is in player's alliance - disallow if not contested
+            const playerAlliance = s.playerFaction === 'usa' ? ['nato', 'western'] : ['warsaw', 'communist'];
+            const targetAlliance = c.alignment;
+            const isInPlayerAlliance = playerAlliance.includes(targetAlliance);
+            if (isInPlayerAlliance) {
+              logMsg = 'Cannot send diplomatic mission to your own alliance member.';
+              newStats.actionPoints += 1; // refund action point
+              return {
+                ...s,
+                usaStats: s.playerFaction === 'usa' ? newStats : s.usaStats,
+                ussrStats: s.playerFaction === 'ussr' ? newStats : s.ussrStats,
+                logs: [...s.logs, logMsg],
+              };
+            }
             const newInfluence = { ...c.influence };
             if (s.playerFaction === 'usa') newInfluence.usa = Math.min(100, newInfluence.usa + 20);
             else newInfluence.ussr = Math.min(100, newInfluence.ussr + 20);
@@ -600,6 +720,20 @@ export function useGameState() {
         if (targetId) {
           const c = updatedCountries[targetId];
           if (c) {
+            // Check if target is in player's alliance - disallow if not contested
+            const playerAlliance = s.playerFaction === 'usa' ? ['nato', 'western'] : ['warsaw', 'communist'];
+            const targetAlliance = c.alignment;
+            const isInPlayerAlliance = playerAlliance.includes(targetAlliance);
+            if (isInPlayerAlliance) {
+              logMsg = 'Cannot initiate proxy war within your own alliance.';
+              newStats.actionPoints += 1;
+              return {
+                ...s,
+                usaStats: s.playerFaction === 'usa' ? newStats : s.usaStats,
+                ussrStats: s.playerFaction === 'ussr' ? newStats : s.ussrStats,
+                logs: [...s.logs, logMsg],
+              };
+            }
             const newInfluence = { ...c.influence };
             if (s.playerFaction === 'usa') {
               newInfluence.usa = Math.min(100, newInfluence.usa + 15);
@@ -618,13 +752,38 @@ export function useGameState() {
         if (targetId) {
           const c = updatedCountries[targetId];
           if (c) {
-            logMsg = `Intelligence report: ${c.name} - Military: ${c.military}, Stability: ${c.stability}, USSR: ${c.influence.ussr}%`;
+            // Check if target is in player's alliance - disallow if not contested
+            const playerAlliance = s.playerFaction === 'usa' ? ['nato', 'western'] : ['warsaw', 'communist'];
+            const targetAlliance = c.alignment;
+            const isInPlayerAlliance = playerAlliance.includes(targetAlliance);
+            if (isInPlayerAlliance) {
+              logMsg = 'Cannot run intelligence operations within your own alliance.';
+              newStats.actionPoints += 1;
+              return {
+                ...s,
+                usaStats: s.playerFaction === 'usa' ? newStats : s.usaStats,
+                ussrStats: s.playerFaction === 'ussr' ? newStats : s.ussrStats,
+                logs: [...s.logs, logMsg],
+              };
+            }
+            // Intelligence operation reduces stability by 3
+            const stabilityReduction = 3;
+            let updatedCountry = { ...c, stability: Math.max(10, c.stability - stabilityReduction) };
+
+            // Check if this triggers a civil war condition (stability <= 10 and influence >= 100%)
+            const playerInfluenceKey = s.playerFaction === 'usa' ? 'usa' : 'ussr';
+            if (updatedCountry.stability <= 10 && updatedCountry.influence[playerInfluenceKey] >= 100) {
+              updatedCountry = { ...updatedCountry, inCivilWar: true, civilWarSide: null };
+              logMsg = `Intelligence operation successful! ${c.name}'s stability has collapsed. Civil war condition triggered!`;
+            } else {
+              logMsg = `Intelligence report: ${c.name} - Military: ${c.military}, Stability: ${updatedCountry.stability}, ${s.playerFaction.toUpperCase()}: ${updatedCountry.influence[playerInfluenceKey]}%`;
+            }
+            updatedCountries[targetId] = updatedCountry;
             if (Math.random() < 0.3) {
               newStats.prestige = Math.max(0, newStats.prestige - 10);
               logMsg = 'Intelligence operation compromised! Prestige -10.';
             } else {
               newStats.prestige += 5;
-              logMsg = 'Intelligence operation successful. Prestige +5.';
             }
           }
         }
@@ -660,6 +819,33 @@ export function useGameState() {
           };
         } else {
           logMsg = 'The Chinese Civil War is already resolved.';
+        }
+      } else if (actionId === 'cuba_aid') {
+        const cubRev = { ...s.cubanRevolution };
+        if (!cubRev.resolved) {
+          if (s.playerFaction === 'ussr' && targetId === 'communist') {
+            cubRev.communistAid += 1;
+            cubRev.totalCommunistAid += 1;
+            logMsg = 'Military aid sent to Cuban revolutionaries. They advance.';
+            newTension += 2;
+          } else if (s.playerFaction === 'usa' && targetId === 'western') {
+            cubRev.westernAid += 1;
+            cubRev.totalWesternAid += 1;
+            logMsg = 'Military aid sent to Cuban government forces. They strengthen.';
+            newTension += 2;
+          } else {
+            logMsg = 'Aid dispatched to allied Cuban faction.';
+          }
+          return {
+            ...s,
+            cubanRevolution: cubRev,
+            usaStats: s.playerFaction === 'usa' ? newStats : s.usaStats,
+            ussrStats: s.playerFaction === 'ussr' ? newStats : s.ussrStats,
+            tension: Math.min(100, Math.max(0, newTension)),
+            logs: [...s.logs, logMsg],
+          };
+        } else {
+          logMsg = 'The Cuban Revolution is already resolved.';
         }
       } else if (actionId === 'economy') {
         newStats.gdp += 100;

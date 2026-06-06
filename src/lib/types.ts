@@ -113,6 +113,10 @@ export interface Country {
   coastal: boolean;
   neighbors: string[];
   productionPoints: number;
+  /** Whether a civil war is active in this country */
+  inCivilWar?: boolean;
+  /** Current leader/alignment control in civil war */
+  civilWarSide?: Faction | null;
 }
 
 export interface PlayerStats {
@@ -164,6 +168,25 @@ export interface ChinaCivilWar {
   lastCommunistCount: number;
 }
 
+export interface CubanRevolution {
+  /** Aid sent this month to communists (reset each turn after the battle roll) */
+  communistAid: number;
+  /** Aid sent this month to western forces (reset each turn after the battle roll) */
+  westernAid: number;
+  /** Total aid ever sent to communists */
+  totalCommunistAid: number;
+  /** Total aid ever sent to western forces */
+  totalWesternAid: number;
+  /** Whether the revolution is still ongoing */
+  resolved: boolean;
+  /** Who won — 'communist' | 'western' | null */
+  winner: 'communist' | 'western' | null;
+  /** Months elapsed since the revolution started */
+  monthsElapsed: number;
+  /** Whether Cuba's alignment is locked in */
+  consolidated: boolean;
+}
+
 export interface GameState {
   status: 'menu' | 'playing' | 'gameover';
   winner: Faction | 'none' | null;
@@ -173,6 +196,7 @@ export interface GameState {
   month: number;
   tension: number;
   chinaCivilWar: ChinaCivilWar;
+  cubanRevolution: CubanRevolution;
   usaStats: PlayerStats;
   ussrStats: PlayerStats;
   countries: Record<string, Country>;

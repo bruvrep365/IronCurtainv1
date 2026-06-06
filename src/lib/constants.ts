@@ -404,7 +404,7 @@ const COUNTRY_DEFS: { id: string; name: string; isoCode: string; alignment: Alig
   { id: 'panama', name: 'Panama', isoCode: '591', alignment: 'nonaligned', stability: 50, military: 15, economy: 20, nukes: 0, influence: { usa: 70, ussr: 10 }, isContested: false, region: 'SA', coastal: true, stateIds: ['pa_panama'] },
   { id: 'australia', name: 'Australia', isoCode: '036', alignment: 'western', stability: 85, military: 35, economy: 55, nukes: 0, influence: { usa: 80, ussr: 0 }, isContested: false, region: 'PAC', coastal: true, stateIds: ['au_nsw','au_vic','au_qld','au_sa','au_wa','au_nt','au_tas'] },
   { id: 'new_zealand', name: 'New Zealand', isoCode: '554', alignment: 'western', stability: 80, military: 15, economy: 35, nukes: 0, influence: { usa: 75, ussr: 5 }, isContested: false, region: 'PAC', coastal: true, stateIds: ['nz_auckland','nz_wellington'] },
-  { id: 'cuba', name: 'Cuba', isoCode: '192', alignment: 'communist', stability: 30, military: 20, economy: 20, nukes: 0, influence: { usa: 10, ussr: 75 }, isContested: false, region: 'NA', coastal: true, stateIds: ['cu_havana','cu_santiago'] },
+  { id: 'cuba', name: 'Cuba', isoCode: '192', alignment: 'western', stability: 50, military: 15, economy: 25, nukes: 0, influence: { usa: 70, ussr: 10 }, isContested: true, region: 'NA', coastal: true, stateIds: ['cu_havana','cu_santiago'] },
 ];
 
 function buildCountries(): Record<string, Country> {
@@ -1104,6 +1104,55 @@ export const EVENTS: GameEvent[] = [
       { id: 'c2', text: 'Support the new Russia', effect: (s) => ({ status: 'gameover', winner: 'usa', victoryReason: 'Peaceful transition. The USA wins the Cold War.' }) },
     ]
   },
+  {
+    id: 'cuban_revolution_start', year: 1953, month: 7, title: 'Cuban Revolution Begins', description: 'Fidel Castro launches an armed rebellion against Cuba\'s right-wing government. The island\'s future hangs in the balance.\n\nHow will the superpowers respond?',
+    faction: 'both', choices: [
+      { id: 'c1', text: 'Provide aid and support', effect: (s) => ({ cubanRevolution: { ...s.cubanRevolution, communistAid: 5, totalCommunistAid: 5 }, ussrStats: { ...s.ussrStats, gdp: s.ussrStats.gdp - 20 } }) },
+      { id: 'c2', text: 'Maintain neutrality for now', effect: (s) => s },
+    ]
+  },
+  {
+    id: 'suez_crisis', year: 1956, month: 7, title: 'Suez Crisis', description: 'Egypt nationalizes the Suez Canal. Britain and France prepare military intervention. Will the superpowers get involved?',
+    faction: 'both', choices: [
+      { id: 'c1', text: 'Support British/French intervention', effect: (s) => ({ tension: s.tension + 8, usaStats: { ...s.usaStats, prestige: s.usaStats.prestige + 10 } }) },
+      { id: 'c2', text: 'Support Egyptian sovereignty', effect: (s) => ({ tension: s.tension + 5, ussrStats: { ...s.ussrStats, prestige: s.ussrStats.prestige + 15 } }) },
+    ]
+  },
+  {
+    id: 'sino_soviet_split', year: 1960, month: 4, title: 'Sino-Soviet Split', description: 'The relationship between the USSR and China fractures over ideological differences and territorial disputes. The communist bloc splinters.',
+    faction: 'both', choices: [
+      { id: 'c1', text: 'Support China', effect: (s) => ({ tension: s.tension + 5, ussrStats: { ...s.ussrStats, prestige: s.ussrStats.prestige - 10 } }) },
+      { id: 'c2', text: 'Support the USSR', effect: (s) => ({ tension: s.tension + 5, ussrStats: { ...s.ussrStats, prestige: s.ussrStats.prestige + 10 } }) },
+    ]
+  },
+  {
+    id: 'bay_of_pigs', year: 1961, month: 4, title: 'Bay of Pigs Invasion', description: 'CIA-backed Cuban exiles attempt to invade Cuba and overthrow the revolutionary government. The invasion fails catastrophically.',
+    faction: 'usa', choices: [
+      { id: 'c1', text: 'Publicly support the operation', effect: (s) => ({ tension: s.tension + 15, usaStats: { ...s.usaStats, prestige: s.usaStats.prestige - 20, gdp: s.usaStats.gdp - 50 }, cubanRevolution: { ...s.cubanRevolution, westernAid: (s.cubanRevolution.westernAid || 0) + 10, totalWesternAid: (s.cubanRevolution.totalWesternAid || 0) + 10 } }) },
+      { id: 'c2', text: 'Deny involvement and minimize fallout', effect: (s) => ({ tension: s.tension + 10, usaStats: { ...s.usaStats, gdp: s.usaStats.gdp - 30 } }) },
+    ]
+  },
+  {
+    id: 'vietnam_escalation', year: 1965, month: 3, title: 'Operation Rolling Thunder', description: 'The USA begins a massive bombing campaign against North Vietnam. American troops are landing in large numbers.',
+    faction: 'usa', choices: [
+      { id: 'c1', text: 'Full commitment — win at any cost', effect: (s) => ({ tension: s.tension + 12, usaStats: { ...s.usaStats, military: Math.min(100, s.usaStats.military + 10), gdp: s.usaStats.gdp - 150, prestige: s.usaStats.prestige + 5 } }) },
+      { id: 'c2', text: 'Limited involvement — support South Vietnam', effect: (s) => ({ tension: s.tension + 7, usaStats: { ...s.usaStats, military: Math.min(100, s.usaStats.military + 5), gdp: s.usaStats.gdp - 80 } }) },
+    ]
+  },
+  {
+    id: 'vietnam_escalation_ussr', year: 1965, month: 3, title: 'Vietnam War Escalation', description: 'American bombing of North Vietnam intensifies. The USSR must choose how to support its ally.',
+    faction: 'ussr', choices: [
+      { id: 'c1', text: 'Send air defence systems and weapons', effect: (s) => ({ tension: s.tension + 10, ussrStats: { ...s.ussrStats, gdp: s.ussrStats.gdp - 100 } }) },
+      { id: 'c2', text: 'Provide limited aid to North Vietnam', effect: (s) => ({ tension: s.tension + 5, ussrStats: { ...s.ussrStats, gdp: s.ussrStats.gdp - 40 } }) },
+    ]
+  },
+  {
+    id: 'tet_offensive', year: 1968, month: 1, title: 'Tet Offensive', description: 'North Vietnamese forces launch a massive coordinated assault across South Vietnam. The war\'s turning point approaches.',
+    faction: 'both', choices: [
+      { id: 'c1', text: 'Press for victory', effect: (s) => ({ tension: s.tension + 8, usaStats: { ...s.usaStats, prestige: s.usaStats.prestige - 10 } }) },
+      { id: 'c2', text: 'Begin peace negotiations', effect: (s) => ({ tension: s.tension - 5, usaStats: { ...s.usaStats, prestige: s.usaStats.prestige + 5 } }) },
+    ]
+  },
 ];
 
 export const TRADE_ROUTES: { from: string; to: string; value: number }[] = [
@@ -1179,6 +1228,16 @@ export const INITIAL_STATE: GameState = {
     stalemateStreak: 0,
     lastBattleDirection: 0,
     lastCommunistCount: CHINA_COMMUNIST_INITIAL.length,
+  },
+  cubanRevolution: {
+    communistAid: 0,
+    westernAid: 0,
+    totalCommunistAid: 0,
+    totalWesternAid: 0,
+    resolved: false,
+    winner: null,
+    monthsElapsed: 0,
+    consolidated: false,
   },
   usaStats: buildUSAStats(),
   ussrStats: buildUSSRStats(),
