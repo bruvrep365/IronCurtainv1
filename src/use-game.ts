@@ -361,12 +361,12 @@ function resolveCubanRevolution(state: GameState, newYear: number, newMonth: num
 
   let communistChance: number;
   if (playerAid === 0) {
-    communistChance = 0.55 + cumulativeSovietBonus;
+    communistChance = 0.60 + cumulativeSovietBonus;
   } else if (playerFaction === 'ussr') {
-    const base = playerAid >= 3 ? 0.82 : playerAid === 2 ? 0.73 : 0.65;
+    const base = playerAid >= 3 ? 0.86 : playerAid === 2 ? 0.78 : 0.70;
     communistChance = Math.min(0.95, base + cumulativeSovietBonus);
   } else {
-    const westernChance = playerAid >= 3 ? 0.70 : playerAid === 2 ? 0.60 : 0.50;
+    const westernChance = playerAid >= 3 ? 0.66 : playerAid === 2 ? 0.56 : 0.46;
     communistChance = Math.max(0.05, 1 - westernChance + cumulativeSovietBonus);
   }
 
