@@ -1100,7 +1100,10 @@ export function useGameState() {
       const node = tree.nodes.find(n => n.id === nodeId);
       if (!node || node.status !== 'available') return s;
       if (tree.activeNodeId) return s;
-
+      if (tree.politicalPath) {
+        if (tree.politicalPath === 'stalinist' && nodeId.startsWith('sp_r')) return s;
+        if (tree.politicalPath === 'reformist' && nodeId.startsWith('sp_s')) return s;
+      }
       // Auto-lock political path when starting sp_s1 or sp_r1
       let updatedTree = { ...tree };
       const sp0 = tree.nodes.find(n => n.id === 'sp4');
@@ -1112,8 +1115,10 @@ export function useGameState() {
         const updatedNodes = tree.nodes.map(n => {
           const isStalinist = n.id.startsWith('sp_s');
           const isReformist = n.id.startsWith('sp_r');
-          if (pathToChoose === 'stalinist' && isReformist) return n;
-          if (pathToChoose === 'reformist' && isStalinist) return n;
+          const isOpposing =
+            (pathToChoose === 'stalinist' && isReformist) ||
+            (pathToChoose === 'reformist' && isStalinist);
+          if (isOpposing) return { ...n, status: 'locked' as const }; // force-lock rejected path
           if (n.status === 'locked') {
             const prereqsMet = n.prerequisites.every(pid => tree.nodes.find(x => x.id === pid)?.status === 'completed');
             if (prereqsMet) return { ...n, status: 'available' as const };
@@ -1154,8 +1159,10 @@ export function useGameState() {
       const updatedNodes = tree.nodes.map(n => {
         const isStalinist = n.id.startsWith('sp_s');
         const isReformist = n.id.startsWith('sp_r');
-        if (path === 'stalinist' && isReformist) return n;
-        if (path === 'reformist' && isStalinist) return n;
+        const isOpposing =
+          (path === 'stalinist' && isReformist) ||
+          (path === 'reformist' && isStalinist);
+        if (isOpposing) return { ...n, status: 'locked' as const }; // force-lock rejected path
         if (n.status === 'locked') {
           const prereqsMet = n.prerequisites.every(pid => tree.nodes.find(x => x.id === pid)?.status === 'completed');
           if (prereqsMet) return { ...n, status: 'available' as const };
