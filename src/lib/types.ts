@@ -169,6 +169,10 @@ export interface ChinaCivilWar {
 }
 
 export interface CubanRevolution {
+  /** Which Cuban provinces the communists currently hold */
+  communistStates: string[];
+  /** Which Cuban provinces the western/government forces currently hold */
+  westernStates: string[];
   /** Aid sent this month to communists (reset each turn after the battle roll) */
   communistAid: number;
   /** Aid sent this month to western forces (reset each turn after the battle roll) */
@@ -185,6 +189,20 @@ export interface CubanRevolution {
   monthsElapsed: number;
   /** Whether Cuba's alignment is locked in */
   consolidated: boolean;
+  /**
+   * Months elapsed since the revolution ended. Cuba spends ~12 months
+   * consolidating before it becomes uncontested and fully locked in.
+   */
+  consolidationMonths: number;
+  /**
+   * How many consecutive direction reversals have happened.
+   * When this hits 2 the battle is forced so the war breaks out of oscillation.
+   */
+  stalemateStreak: number;
+  /** Direction of the last battle: 1 = communists gained, -1 = western gained, 0 = no change. */
+  lastBattleDirection: number;
+  /** Communist province count at the end of the previous turn (stalemate detection). */
+  lastCommunistCount: number;
 }
 
 export interface GameState {

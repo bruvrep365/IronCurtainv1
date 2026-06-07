@@ -201,11 +201,16 @@ export function GameApp() {
                         disabled={pStats.actionPoints < 1}
                         className="w-full text-left px-3 py-2 text-xs border border-border uppercase tracking-widest disabled:opacity-40"
                         style={{ background: '#0d2a0d', color: '#4a8a4a' }}>
-                        [1 AP] Diplomatic Mission
+                        [1 AP] {(() => {
+                          const playerAlliance = isUSA ? ['nato', 'western'] : ['warsaw', 'communist'];
+                          const isOwnOrAlly = playerAlliance.includes(selectedCountry.alignment) ||
+                            (isUSA && selectedCountry.id === 'usa') || (!isUSA && selectedCountry.id === 'ussr');
+                          return isOwnOrAlly ? 'Propaganda Drive (+Stability)' : 'Diplomatic Mission (+3 Influence)';
+                        })()}
                       </button>
                       <button data-testid={`button-proxy-${selectedCountry.id}`}
                         onClick={() => performAction('proxy', selectedCountry.id)}
-                        disabled={pStats.actionPoints < 1}
+                        disabled={pStats.actionPoints < 1 || selectedCountry.stability >= 10 || (isUSA ? selectedCountry.influence.usa : selectedCountry.influence.ussr) <= 80}
                         className="w-full text-left px-3 py-2 text-xs border border-border uppercase tracking-widest disabled:opacity-40"
                         style={{ background: '#2a0d0d', color: '#8a4a4a' }}>
                         [1 AP] Proxy War (+Tension)
@@ -215,7 +220,7 @@ export function GameApp() {
                         disabled={pStats.actionPoints < 1}
                         className="w-full text-left px-3 py-2 text-xs border border-border uppercase tracking-widest disabled:opacity-40"
                         style={{ background: '#1a1a0d', color: '#8a8a4a' }}>
-                        [1 AP] Intelligence Op
+                        [1 AP] Intelligence Op (-3 Stability)
                       </button>
                     </div>
                   </>
@@ -257,6 +262,45 @@ export function GameApp() {
                 {state.chinaCivilWar?.resolved && state.selectedCountryId === 'china' && (
                   <div className="mt-3 border border-border p-2 text-xs" style={{ background: '#0d1a0d', color: '#4a8a4a' }}>
                     ✓ Chinese Civil War resolved — {state.chinaCivilWar.winner === 'communist' ? "People's Republic of China" : 'Republic of China'} prevailed.
+                  </div>
+                )}
+
+                {/* Cuban Revolution Panel — only visible when Cuba is selected */}
+                {state.cubanRevolution && !state.cubanRevolution.resolved && state.selectedCountryId === 'cuba' && (
+                  <div className="mt-3 border border-border p-3 space-y-2" style={{ background: '#0d1a0d' }}>
+                    <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#ffaa44' }}>⚔ CUBAN REVOLUTION</div>
+                    <div className="text-xs" style={{ color: '#8a8a4a' }}>
+                      Communist provinces: <span style={{ color: '#bf4a4a' }}>{state.cubanRevolution.communistStates.length}</span>
+                      {' / '}
+                      Government provinces: <span style={{ color: '#4a8abf' }}>{state.cubanRevolution.westernStates.length}</span>
+                    </div>
+                    <div className="h-2 w-full bg-input flex">
+                      <div className="h-full transition-all" style={{ width: `${Math.round(state.cubanRevolution.communistStates.length / 2 * 100)}%`, background: '#bf1a1a' }} />
+                      <div className="h-full transition-all" style={{ width: `${Math.round(state.cubanRevolution.westernStates.length / 2 * 100)}%`, background: '#1a6abf' }} />
+                    </div>
+                    <div className="text-xs" style={{ color: '#4a5a4a' }}>Castro's guerrillas fight from the Sierra Maestra. Aid shapes the outcome.</div>
+                    {isUSA ? (
+                      <button
+                        onClick={() => performAction('cuba_aid', 'western')}
+                        disabled={pStats.actionPoints < 1}
+                        className="w-full text-left px-3 py-2 text-xs border border-border uppercase tracking-widest disabled:opacity-40"
+                        style={{ background: '#0d1a2a', color: '#4a8abf' }}>
+                        [1 AP] Send Military Aid to Government
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => performAction('cuba_aid', 'communist')}
+                        disabled={pStats.actionPoints < 1}
+                        className="w-full text-left px-3 py-2 text-xs border border-border uppercase tracking-widest disabled:opacity-40"
+                        style={{ background: '#2a0d0d', color: '#bf4a4a' }}>
+                        [1 AP] Send Military Aid to Revolutionaries
+                      </button>
+                    )}
+                  </div>
+                )}
+                {state.cubanRevolution?.resolved && state.selectedCountryId === 'cuba' && (
+                  <div className="mt-3 border border-border p-2 text-xs" style={{ background: '#0d1a0d', color: '#4a8a4a' }}>
+                    ✓ Cuban Revolution resolved — {state.cubanRevolution.winner === 'communist' ? "Communist Cuba" : 'Western-aligned Cuba'} prevailed.
                   </div>
                 )}
 

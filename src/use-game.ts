@@ -280,56 +280,160 @@ function resolveChinaCivilWar(state: GameState, newYear: number, newMonth: numbe
   return { ccw, newEvent };
 }
 
+const CUBA_COMMUNIST_ADVANCE_ORDER = ['cu_santiago', 'cu_havana'];
+const CUBA_WESTERN_ADVANCE_ORDER = ['cu_havana', 'cu_santiago'];
+const CUBA_CONSOLIDATION_MONTHS = 12;
+
+/**
+ * The Cuban Revolution civil war starts when the event fires (July 1953).
+ * Initially, communists hold no provinces; they begin gaining ground from
+ * Santiago (Sierra Maestra) once the guerrilla phase begins (December 1956).
+ * If the war reaches January 1959 without resolving, communists auto-win
+ * (historical: Castro entered Havana January 1959).
+ */
 function resolveCubanRevolution(state: GameState, newYear: number, newMonth: number): { cubRev: CubanRevolution; newEvent: GameEvent | null } {
-  const cubRev = { ...state.cubanRevolution };
+  const cubRev: CubanRevolution = state.cubanRevolution
+    ? {
+        ...state.cubanRevolution,
+        communistStates: Array.isArray(state.cubanRevolution.communistStates) ? [...state.cubanRevolution.communistStates] : [],
+        westernStates: Array.isArray(state.cubanRevolution.westernStates) ? [...state.cubanRevolution.westernStates] : ['cu_havana', 'cu_santiago'],
+        consolidationMonths: state.cubanRevolution.consolidationMonths ?? 0,
+        stalemateStreak: state.cubanRevolution.stalemateStreak ?? 0,
+        lastBattleDirection: state.cubanRevolution.lastBattleDirection ?? 0,
+        lastCommunistCount: state.cubanRevolution.lastCommunistCount ?? 0,
+      }
+    : {
+        communistStates: [],
+        westernStates: ['cu_havana', 'cu_santiago'],
+        communistAid: 0, westernAid: 0,
+        totalCommunistAid: 0, totalWesternAid: 0,
+        resolved: false, winner: null,
+        monthsElapsed: 0, consolidated: false,
+        consolidationMonths: 0, stalemateStreak: 0,
+        lastBattleDirection: 0, lastCommunistCount: 0,
+      };
+
   let newEvent: GameEvent | null = null;
 
-  // Cuban Revolution runs from July 1953 to January 1960
-  // If it reaches January 1960 without resolving, communists auto-win
-  const revolutionStartYear = 1953;
-  const revolutionStartMonth = 7;
-  const autoWinYear = 1960;
+  // If already fully consolidated, nothing to do
+  if (cubRev.consolidated) return { cubRev, newEvent };
+
+  // If resolved but not yet consolidated, advance consolidation
+  if (cubRev.resolved) {
+    cubRev.consolidationMonths = (cubRev.consolidationMonths ?? 0) + 1;
+    if (cubRev.consolidationMonths >= CUBA_CONSOLIDATION_MONTHS) {
+      cubRev.consolidated = true;
+    }
+    return { cubRev, newEvent };
+  }
+
+  // The guerrilla phase begins December 1956 (Castro lands in Cuba with Granma)
+  const guerrillaStartYear = 1956;
+  const guerrillaStartMonth = 12;
+  const beforeGuerrilla = newYear < guerrillaStartYear ||
+    (newYear === guerrillaStartYear && newMonth < guerrillaStartMonth);
+
+  if (beforeGuerrilla) {
+    // Before the guerrilla phase, no province changes — just tracking
+    cubRev.communistAid = 0;
+    cubRev.westernAid = 0;
+    return { cubRev, newEvent };
+  }
+
+  // Auto-win deadline: January 1959 (historical date Castro took Havana)
+  const autoWinYear = 1959;
   const autoWinMonth = 1;
 
-  if (!cubRev.resolved && (newYear > revolutionStartYear || (newYear === revolutionStartYear && newMonth >= revolutionStartMonth))) {
-    cubRev.monthsElapsed += 1;
+  cubRev.monthsElapsed += 1;
 
-    // Determine if war should resolve
-    const aidDifference = cubRev.totalCommunistAid - cubRev.totalWesternAid;
-    const roll = Math.random();
+  // When guerrillas first arrive, give communists a foothold in Santiago (Sierra Maestra)
+  if (cubRev.communistStates.length === 0 && cubRev.westernStates.includes('cu_santiago')) {
+    cubRev.westernStates = cubRev.westernStates.filter(s => s !== 'cu_santiago');
+    cubRev.communistStates = ['cu_santiago'];
+  }
 
-    // Higher communist aid makes communist victory more likely
-    const communistWinChance = 0.2 + (aidDifference * 0.05); // 0 difference = 20% communist chance
+  // Monthly battle roll
+  const monthlyAdvantage = cubRev.communistAid - cubRev.westernAid;
+  const playerFaction = state.playerFaction;
+  const playerAid = playerFaction === 'ussr' ? cubRev.communistAid : cubRev.westernAid;
 
-    if (roll < Math.min(0.9, communistWinChance) || (newYear > autoWinYear || (newYear === autoWinYear && newMonth >= autoWinMonth))) {
-      cubRev.winner = 'communist';
-      cubRev.resolved = true;
-      newEvent = {
-        id: 'cuba_revolution_end',
-        year: newYear,
-        month: newMonth,
-        title: 'Cuban Revolution Victorious',
-        description: 'Fidel Castro\'s revolutionaries have overthrown the government. Cuba is now communist and aligns with the Soviet Union.',
-        faction: 'both',
-        choices: [
-          { id: 'c1', text: 'Accept the outcome', effect: (s: GameState): Partial<GameState> => ({ cubanRevolution: { ...s.cubanRevolution, consolidated: true } }) },
-        ]
-      };
-    } else if (roll > 0.6) {
-      cubRev.winner = 'western';
-      cubRev.resolved = true;
-      newEvent = {
-        id: 'cuba_revolution_end',
-        year: newYear,
-        month: newMonth,
-        title: 'Cuban Revolution Crushed',
-        description: 'Government forces and US-backed troops have defeated Castro\'s rebellion. Cuba remains under Western influence.',
-        faction: 'both',
-        choices: [
-          { id: 'c1', text: 'Consolidate victory', effect: (s: GameState): Partial<GameState> => ({ cubanRevolution: { ...s.cubanRevolution, consolidated: true } }) },
-        ]
-      };
+  const cumulativeSovietBonus = Math.min(0.10, Math.floor((cubRev.totalCommunistAid ?? 0) / 3) * 0.01);
+
+  let communistChance: number;
+  if (playerAid === 0) {
+    communistChance = 0.55 + cumulativeSovietBonus;
+  } else if (playerFaction === 'ussr') {
+    const base = playerAid >= 3 ? 0.82 : playerAid === 2 ? 0.73 : 0.65;
+    communistChance = Math.min(0.95, base + cumulativeSovietBonus);
+  } else {
+    const westernChance = playerAid >= 3 ? 0.70 : playerAid === 2 ? 0.60 : 0.50;
+    communistChance = Math.max(0.05, 1 - westernChance + cumulativeSovietBonus);
+  }
+
+  const isStalemate = cubRev.stalemateStreak >= 2;
+  const communistAdvances = isStalemate
+    ? (communistChance >= 0.5)
+    : (Math.random() < communistChance);
+
+  const preBattleCount = cubRev.communistStates.length;
+
+  if (communistAdvances) {
+    const nextTarget = CUBA_COMMUNIST_ADVANCE_ORDER.find(p => cubRev.westernStates.includes(p));
+    if (nextTarget) {
+      cubRev.westernStates = cubRev.westernStates.filter(p => p !== nextTarget);
+      cubRev.communistStates = [...cubRev.communistStates, nextTarget];
     }
+  } else {
+    const nextTarget = CUBA_WESTERN_ADVANCE_ORDER.find(p => cubRev.communistStates.includes(p));
+    if (nextTarget) {
+      cubRev.communistStates = cubRev.communistStates.filter(p => p !== nextTarget);
+      cubRev.westernStates = [...cubRev.westernStates, nextTarget];
+    }
+  }
+
+  // Track direction reversal
+  const thisDirection = cubRev.communistStates.length > preBattleCount ? 1
+    : cubRev.communistStates.length < preBattleCount ? -1
+    : 0;
+  const lastDir = cubRev.lastBattleDirection ?? 0;
+  const reversed = thisDirection !== 0 && lastDir !== 0 && thisDirection !== lastDir;
+  cubRev.stalemateStreak = isStalemate ? 0 : (reversed ? cubRev.stalemateStreak + 1 : cubRev.stalemateStreak);
+  cubRev.lastBattleDirection = thisDirection !== 0 ? thisDirection : lastDir;
+  cubRev.lastCommunistCount = cubRev.communistStates.length;
+
+  // Check for resolution
+  const forcedCommunistWin = newYear > autoWinYear || (newYear === autoWinYear && newMonth >= autoWinMonth);
+
+  if (cubRev.westernStates.length === 0 || forcedCommunistWin) {
+    cubRev.resolved = true;
+    cubRev.winner = 'communist';
+    cubRev.communistStates = ['cu_havana', 'cu_santiago'];
+    cubRev.westernStates = [];
+    newEvent = {
+      id: 'cuba_revolution_end',
+      year: newYear,
+      month: newMonth,
+      title: 'Cuban Revolution Victorious',
+      description: 'Fidel Castro\'s revolutionaries have overthrown the government. Cuba is now communist and aligns with the Soviet Union.',
+      faction: 'both',
+      choices: [
+        { id: 'c1', text: 'Accept the outcome', effect: (s: GameState): Partial<GameState> => ({ cubanRevolution: { ...s.cubanRevolution, consolidated: true } }) },
+      ]
+    };
+  } else if (cubRev.communistStates.length === 0) {
+    cubRev.resolved = true;
+    cubRev.winner = 'western';
+    newEvent = {
+      id: 'cuba_revolution_end',
+      year: newYear,
+      month: newMonth,
+      title: 'Cuban Revolution Crushed',
+      description: 'Government forces and US-backed troops have defeated Castro\'s rebellion. Cuba remains under Western influence.',
+      faction: 'both',
+      choices: [
+        { id: 'c1', text: 'Consolidate victory', effect: (s: GameState): Partial<GameState> => ({ cubanRevolution: { ...s.cubanRevolution, consolidated: true } }) },
+      ]
+    };
   }
 
   // Reset monthly aid counters
@@ -371,12 +475,12 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
   // Resolve the Cuban Revolution for this month
   const { cubRev, newEvent: cubaEvent } = resolveCubanRevolution(state, newYear, newMonth);
 
-  // Check if we should trigger Cuban Missile Crisis (only if Cuba is communist)
+  // Check if we should trigger Cuban Missile Crisis (only if Cuba is communist/communist-aligned)
   let cubanMissileEvent: GameEvent | null = null;
   if (newYear === 1962 && newMonth === 10) {
     const cuba = state.countries['cuba'];
-    if (cuba && (cuba.alignment === 'communist' || cubaEvent?.description.includes('communist'))) {
-      // Only trigger CMC if Cuba is communist
+    // Only trigger CMC if Cuba is communist-aligned (communist or warsaw)
+    if (cuba && (cuba.alignment === 'communist' || cuba.alignment === 'warsaw')) {
       cubanMissileEvent = EVENTS.find(e => e.id === 'e8') || null;
     }
   }
@@ -447,7 +551,7 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
         };
       } else {
         // Still consolidating
-        const consolidationProgress = 0.5;
+        const consolidationProgress = (cubRev.consolidationMonths ?? 0) / CUBA_CONSOLIDATION_MONTHS;
         const winnerInfluence = Math.round(50 + consolidationProgress * 50);
         const loserInfluence = 100 - winnerInfluence;
         updatedCountries['cuba'] = {
@@ -693,13 +797,42 @@ export function useGameState() {
         if (targetId) {
           const c = updatedCountries[targetId];
           if (c) {
-            // Check if target is in player's alliance - disallow if not contested
+            // Check if target is in player's alliance
+            const playerAlliance = s.playerFaction === 'usa' ? ['nato', 'western'] : ['warsaw', 'communist'];
+            const targetAlliance = c.alignment;
+            const isInPlayerAlliance = playerAlliance.includes(targetAlliance);
+            // Also check if target IS the player's own nation
+            const isOwnNation = (s.playerFaction === 'usa' && targetId === 'usa') || (s.playerFaction === 'ussr' && targetId === 'ussr');
+
+            if (isInPlayerAlliance || isOwnNation) {
+              // Propaganda Drive: increases stability for own nation or allies
+              const stabilityIncrease = 5;
+              updatedCountries[targetId] = { ...c, stability: Math.min(100, c.stability + stabilityIncrease) };
+              newStats.prestige += 3;
+              logMsg = `Propaganda drive in ${c.name}. Stability +${stabilityIncrease}.`;
+            } else {
+              // Diplomatic Mission for non-aligned / enemy nations: increase influence by 3
+              const newInfluence = { ...c.influence };
+              if (s.playerFaction === 'usa') newInfluence.usa = Math.min(100, newInfluence.usa + 3);
+              else newInfluence.ussr = Math.min(100, newInfluence.ussr + 3);
+              updatedCountries[targetId] = { ...c, influence: newInfluence };
+              newStats.prestige += 5;
+              newTension -= 5;
+              logMsg = 'Diplomatic mission complete. Influence +3.';
+            }
+          }
+        }
+      } else if (actionId === 'proxy') {
+        if (targetId) {
+          const c = updatedCountries[targetId];
+          if (c) {
+            // Check if target is in player's alliance - disallow
             const playerAlliance = s.playerFaction === 'usa' ? ['nato', 'western'] : ['warsaw', 'communist'];
             const targetAlliance = c.alignment;
             const isInPlayerAlliance = playerAlliance.includes(targetAlliance);
             if (isInPlayerAlliance) {
-              logMsg = 'Cannot send diplomatic mission to your own alliance member.';
-              newStats.actionPoints += 1; // refund action point
+              logMsg = 'Cannot initiate proxy war within your own alliance.';
+              newStats.actionPoints += 1;
               return {
                 ...s,
                 usaStats: s.playerFaction === 'usa' ? newStats : s.usaStats,
@@ -707,25 +840,21 @@ export function useGameState() {
                 logs: [...s.logs, logMsg],
               };
             }
-            const newInfluence = { ...c.influence };
-            if (s.playerFaction === 'usa') newInfluence.usa = Math.min(100, newInfluence.usa + 20);
-            else newInfluence.ussr = Math.min(100, newInfluence.ussr + 20);
-            updatedCountries[targetId] = { ...c, influence: newInfluence };
-          }
-        }
-        newStats.prestige += 5;
-        newTension -= 5;
-        logMsg = 'Diplomatic mission complete. Influence shifted.';
-      } else if (actionId === 'proxy') {
-        if (targetId) {
-          const c = updatedCountries[targetId];
-          if (c) {
-            // Check if target is in player's alliance - disallow if not contested
-            const playerAlliance = s.playerFaction === 'usa' ? ['nato', 'western'] : ['warsaw', 'communist'];
-            const targetAlliance = c.alignment;
-            const isInPlayerAlliance = playerAlliance.includes(targetAlliance);
-            if (isInPlayerAlliance) {
-              logMsg = 'Cannot initiate proxy war within your own alliance.';
+            // Proxy war requires target stability < 10 AND player influence > 80%
+            const playerInfluenceKey = s.playerFaction === 'usa' ? 'usa' : 'ussr';
+            const playerInfluence = c.influence[playerInfluenceKey];
+            if (c.stability >= 10) {
+              logMsg = `Cannot start proxy war: ${c.name} stability too high (${c.stability}, must be < 10).`;
+              newStats.actionPoints += 1;
+              return {
+                ...s,
+                usaStats: s.playerFaction === 'usa' ? newStats : s.usaStats,
+                ussrStats: s.playerFaction === 'ussr' ? newStats : s.ussrStats,
+                logs: [...s.logs, logMsg],
+              };
+            }
+            if (playerInfluence <= 80) {
+              logMsg = `Cannot start proxy war: ${c.name} influence too low (${playerInfluence}%, must be > 80%).`;
               newStats.actionPoints += 1;
               return {
                 ...s,
@@ -752,7 +881,7 @@ export function useGameState() {
         if (targetId) {
           const c = updatedCountries[targetId];
           if (c) {
-            // Check if target is in player's alliance - disallow if not contested
+            // Check if target is in player's alliance - disallow
             const playerAlliance = s.playerFaction === 'usa' ? ['nato', 'western'] : ['warsaw', 'communist'];
             const targetAlliance = c.alignment;
             const isInPlayerAlliance = playerAlliance.includes(targetAlliance);
@@ -768,15 +897,14 @@ export function useGameState() {
             }
             // Intelligence operation reduces stability by 3
             const stabilityReduction = 3;
-            let updatedCountry = { ...c, stability: Math.max(10, c.stability - stabilityReduction) };
+            let updatedCountry = { ...c, stability: Math.max(0, c.stability - stabilityReduction) };
 
-            // Check if this triggers a civil war condition (stability <= 10 and influence >= 100%)
             const playerInfluenceKey = s.playerFaction === 'usa' ? 'usa' : 'ussr';
             if (updatedCountry.stability <= 10 && updatedCountry.influence[playerInfluenceKey] >= 100) {
               updatedCountry = { ...updatedCountry, inCivilWar: true, civilWarSide: null };
               logMsg = `Intelligence operation successful! ${c.name}'s stability has collapsed. Civil war condition triggered!`;
             } else {
-              logMsg = `Intelligence report: ${c.name} - Military: ${c.military}, Stability: ${updatedCountry.stability}, ${s.playerFaction.toUpperCase()}: ${updatedCountry.influence[playerInfluenceKey]}%`;
+              logMsg = `Intelligence report: ${c.name} - Stability: ${updatedCountry.stability}, ${s.playerFaction.toUpperCase()}: ${updatedCountry.influence[playerInfluenceKey]}%`;
             }
             updatedCountries[targetId] = updatedCountry;
             if (Math.random() < 0.3) {
