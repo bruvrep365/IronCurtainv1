@@ -399,7 +399,7 @@ function PoliticalTab({
   onStartFocus: (id: string) => void;
   onChoosePoliticalPath?: (path: PoliticalPath) => void;
 }) {
-  const sp0 = tree.nodes.find(n => n.id === 'sp0');
+  const sp0 = tree.nodes.find(n => n.id === 'sp4');
   const sp0Done = sp0?.status === 'completed';
   const pathChosen = !!tree.politicalPath;
 
@@ -660,7 +660,7 @@ export function FocusTree({ tree, playerFaction, onClose, onStartFocus, onChoose
           if (tab.id === 'political' && playerFaction !== 'ussr') return null;
           const isActive = activeTab === tab.id;
           const hasPoliticalAlert = tab.id === 'political'
-            && !!tree.nodes.find(n => n.id === 'sp0' && n.status === 'completed')
+            && !!tree.nodes.find(n => n.id === 'sp4' && n.status === 'completed')
             && !tree.politicalPath;
           return (
             <button

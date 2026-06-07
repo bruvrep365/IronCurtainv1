@@ -634,7 +634,7 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
         const updatedNodes = updated.map(n => {
           if (n.status === 'locked') {
             // Block nodes of the opposing political path entirely
-            if (n.category === 'political' && n.id !== 'sp0') {
+            if (n.category === 'political' && n.id !== 'sp0' && n.id !== 'sp1' && n.id !== 'sp2' && n.id !== 'sp3' && n.id !== 'sp4') {
               const isStalinist = n.id.startsWith('sp_s');
               const isReformist = n.id.startsWith('sp_r');
               if (currentPoliticalPath === 'stalinist' && isReformist) return n;
@@ -1103,7 +1103,7 @@ export function useGameState() {
 
       // Auto-lock political path when starting sp_s1 or sp_r1
       let updatedTree = { ...tree };
-      const sp0 = tree.nodes.find(n => n.id === 'sp0');
+      const sp0 = tree.nodes.find(n => n.id === 'sp4');
       const needsPathChoice = sp0?.status === 'completed' && !tree.politicalPath;
 
       if (needsPathChoice && (nodeId === 'sp_s1' || nodeId === 'sp_r1')) {
@@ -1147,8 +1147,8 @@ export function useGameState() {
     setState(s => {
       if (!s.playerFaction) return s;
       const tree = s.focusTrees[s.playerFaction];
-      // Can only choose if sp0 is completed and no path chosen yet
-      const sp0 = tree.nodes.find(n => n.id === 'sp0');
+      // Can only choose if sp4 is completed and no path chosen yet
+      const sp0 = tree.nodes.find(n => n.id === 'sp4');
       if (!sp0 || sp0.status !== 'completed' || tree.politicalPath) return s;
       // Unlock the first node of the chosen path
       const updatedNodes = tree.nodes.map(n => {
