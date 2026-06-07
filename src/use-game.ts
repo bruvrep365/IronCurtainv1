@@ -639,7 +639,7 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
               const isReformist = n.id.startsWith('sp_r');
               if (currentPoliticalPath === 'stalinist' && isReformist) return n;
               if (currentPoliticalPath === 'reformist' && isStalinist) return n;
-              if (!currentPoliticalPath && (isStalinist || isReformist)) return n;
+
             }
             const prereqsMet = n.prerequisites.every(pid => updated.find(x => x.id === pid)?.status === 'completed');
             if (prereqsMet) return { ...n, status: 'available' as const };
