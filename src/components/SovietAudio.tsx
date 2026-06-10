@@ -6,42 +6,45 @@ interface SovietAudioProps {
 }
 
 /**
- * SovietAudio component plays the Soviet national anthem on loop when
+ * SovietAudio component plays Soviet anthem background music when
  * the player is playing as the USSR and the game is active.
  * 
- * The audio is sourced from: https://www.youtube.com/watch?v=rIpSNCwQkbY
+ * Audio source: https://www.youtube.com/watch?v=rIpSNCwQkbY
+ * (Soviet National Anthem - instrumental)
  */
 export function SovietAudio({ isPlayingAsUSSR, gameActive }: SovietAudioProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [hasError, setHasError] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (isPlayingAsUSSR && gameActive && !hasError) {
-      // Attempt to play when conditions are met
+    const shouldPlay = isPlayingAsUSSR && gameActive;
+
+    if (shouldPlay && !isPlaying) {
       audio.play().catch(() => {
-        // Browser may block autoplay without user interaction
-        setHasError(true);
+        // Playback may fail due to browser autoplay policies
       });
-    } else {
-      // Pause when conditions are no longer met
+      setIsPlaying(true);
+    } else if (!shouldPlay && isPlaying) {
       audio.pause();
+      setIsPlaying(false);
     }
-  }, [isPlayingAsUSSR, gameActive, hasError]);
+  }, [isPlayingAsUSSR, gameActive, isPlaying]);
 
   return (
     <audio
       ref={audioRef}
       loop
+      volume={0.3}
       style={{ display: 'none' }}
+      onPlay={() => setIsPlaying(true)}
+      onPause={() => setIsPlaying(false)}
       crossOrigin="anonymous"
-      onError={() => setHasError(true)}
     >
-      {/* Using noCors proxy to fetch YouTube video audio */}
       <source
-        src="https://www.youtube.com/watch?v=rIpSNCwQkbY"
+        src="https://ia803402.us.archive.org/28/items/SovietNationalAnthemInstrumental/Soviet%20National%20Anthem%20-%20Instrumental.mp3"
         type="audio/mpeg"
       />
     </audio>
