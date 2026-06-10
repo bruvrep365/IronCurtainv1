@@ -7,7 +7,6 @@ import { FocusTree } from './components/FocusTree';
 import { CombatModal } from './components/CombatModal';
 import { UnitPanel } from './components/UnitPanel';
 import { EconomyPanel } from './components/EconomyPanel';
-import { SovietAudio } from './components/SovietAudio';
 import { TabName } from './lib/types';
 
 export function GameApp() {
@@ -79,7 +78,6 @@ export function GameApp() {
 
   return (
     <div className="h-screen w-full flex flex-col bg-background text-foreground font-mono overflow-hidden">
-      <SovietAudio isPlayingAsUSSR={state.playerFaction === 'ussr'} gameActive={state.status === 'playing'} />
 
       {/* TOP BAR */}
       <div className="h-14 border-b border-border flex items-center justify-between px-4 bg-card shrink-0">
