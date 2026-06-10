@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface SovietAudioProps {
   isPlayingAsUSSR: boolean;
@@ -14,7 +14,6 @@ interface SovietAudioProps {
  */
 export function SovietAudio({ isPlayingAsUSSR, gameActive }: SovietAudioProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -22,29 +21,31 @@ export function SovietAudio({ isPlayingAsUSSR, gameActive }: SovietAudioProps) {
 
     const shouldPlay = isPlayingAsUSSR && gameActive;
 
-    if (shouldPlay && !isPlaying) {
-      audio.play().catch(() => {
-        // Playback may fail due to browser autoplay policies
-      });
-      setIsPlaying(true);
-    } else if (!shouldPlay && isPlaying) {
+    if (shouldPlay) {
+      // Attempt to play
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          console.log('Audio playback failed:', error);
+        });
+      }
+    } else {
+      // Pause when conditions not met
       audio.pause();
-      setIsPlaying(false);
+      audio.currentTime = 0;
     }
-  }, [isPlayingAsUSSR, gameActive, isPlaying]);
+  }, [isPlayingAsUSSR, gameActive]);
 
   return (
     <audio
       ref={audioRef}
       loop
-      volume={0.3}
       style={{ display: 'none' }}
-      onPlay={() => setIsPlaying(true)}
-      onPause={() => setIsPlaying(false)}
       crossOrigin="anonymous"
+      preload="auto"
     >
       <source
-        src="https://ia803402.us.archive.org/28/items/SovietNationalAnthemInstrumental/Soviet%20National%20Anthem%20-%20Instrumental.mp3"
+        src="https://upload.wikimedia.org/wikipedia/commons/transcoded/4/4e/Soviet_Union_National_Anthem.ogg/Soviet_Union_National_Anthem.ogg.mp3"
         type="audio/mpeg"
       />
     </audio>
