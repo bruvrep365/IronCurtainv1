@@ -19,7 +19,7 @@ export function GameApp() {
   if (state.status === 'menu') {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-background text-foreground font-mono relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,0,0.05) 2px, rgba(0,255[...]
+        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,0,0.05) 2px, rgba(0,255,0,0.05))' }} />
         <div className="text-xs text-primary/40 tracking-widest mb-8 uppercase">CLASSIFIED — EYES ONLY // COLD WAR SIMULATION v2.0</div>
         <h1 className="text-7xl font-bold text-primary tracking-widest uppercase mb-1" style={{ textShadow: '0 0 30px rgba(0,255,0,0.4)' }}>
           IRON CURTAIN
