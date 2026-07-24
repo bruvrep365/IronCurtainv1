@@ -91,10 +91,10 @@ function StaticNode({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-bold uppercase tracking-wide" style={{ color: isCompleted ? color.accent : isLocked ? '#3a4a3a' : '#aacaaa' }}>
-              {node.icon} {node.name}
+              {node.name}
             </span>
             <span className="text-xs font-mono shrink-0" style={{ color: STATUS_COLORS[node.status] }}>
-              {isCompleted   ? '✓ DONE'
+              {isCompleted   ? 'DONE'
               : isResearching ? `${node.turnsRemaining}t left`
               : isAvailable   ? 'AVAILABLE'
               : 'LOCKED'}
@@ -216,14 +216,14 @@ function PolNodeCard({
           {node.name}
         </div>
         <div className="text-xs" style={{ color: isLocked ? '#2a3a2a' : '#5a6a5a', lineHeight: '1.2' }}>
-          {node.description.length > 40 ? node.description.substring(0, 37) + '…' : node.description}
+          {node.description.length > 40 ? node.description.substring(0, 37) + '...' : node.description}
         </div>
       </div>
       <div className="mt-1 text-xs font-mono" style={{ color: STATUS_COLORS[node.status], fontWeight: 'bold' }}>
-        {isCompleted   ? '✓'
+        {isCompleted   ? 'DONE'
         : isResearching ? `${node.turnsRemaining}t`
-        : isAvailable   ? '◆'
-        : '✕'}
+        : isAvailable   ? 'OPEN'
+        : 'LOCKED'}
       </div>
     </div>
   );
@@ -360,7 +360,6 @@ function PoliticalChoiceScreen({ onChoose }: { onChoose: (path: PoliticalPath) =
           className="flex flex-col gap-2 p-4 border-2 text-left transition-all duration-200 hover:scale-[1.03]"
           style={{ width: 220, borderColor: '#8a1a1a', background: '#120606', boxShadow: '0 0 16px rgba(138,26,26,0.15)' }}
         >
-          <div className="text-2xl text-center w-full" style={{ color: '#ff4444' }}>☭</div>
           <div className="text-sm font-bold uppercase tracking-widest" style={{ color: '#ff6666' }}>STALINIST</div>
           <div className="text-xs leading-relaxed" style={{ color: '#7a4a4a' }}>
             With Stalin as our guide, we will overcome all! Our glorious Red Army will conquer all.
@@ -376,7 +375,6 @@ function PoliticalChoiceScreen({ onChoose }: { onChoose: (path: PoliticalPath) =
           className="flex flex-col gap-2 p-4 border-2 text-left transition-all duration-200 hover:scale-[1.03]"
           style={{ width: 220, borderColor: '#1a5a3a', background: '#060e09', boxShadow: '0 0 16px rgba(26,90,58,0.15)' }}
         >
-          <div className="text-2xl text-center w-full" style={{ color: '#4ab84a' }}>☀</div>
           <div className="text-sm font-bold uppercase tracking-widest" style={{ color: '#4ab84a' }}>REFORMIST</div>
           <div className="text-xs leading-relaxed" style={{ color: '#3a5a3a' }}>
             The Soviet State requires reform. Our power is built through diplomacy and economic openness.
@@ -419,7 +417,7 @@ function PoliticalTab({
         <span className="text-xs font-bold uppercase tracking-widest" style={{ color: pathColor }}>{pathLabel}</span>
         <span className="text-xs" style={{ color: '#4a4a3a' }}>DRAG OR SCROLL TO NAVIGATE</span>
         {sp0Done && !pathChosen && (
-          <span className="text-xs" style={{ color: '#ffdd44' }}>→ Click a path to commit</span>
+          <span className="text-xs" style={{ color: '#ffdd44' }}>Click a path to commit</span>
         )}
       </div>
       <PoliticalCanvas nodes={allPolitical} tree={tree} onStartFocus={onStartFocus} />
@@ -458,9 +456,6 @@ function FocusDetailModal({
         {/* Header */}
         <div className="flex items-start justify-between gap-4 px-6 py-4 border-b" style={{ borderColor: '#1a3a1a', background: '#030a03' }}>
           <div className="flex items-start gap-4 flex-1">
-            <div className="text-4xl" style={{ opacity: 0.7 }}>
-              {node.icon}
-            </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-2xl font-bold uppercase tracking-widest mb-2" style={{ color: '#00e676' }}>
                 {node.name}
@@ -501,7 +496,7 @@ function FocusDetailModal({
             className="shrink-0 w-8 h-8 flex items-center justify-center rounded border transition-colors hover:bg-white/10"
             style={{ borderColor: '#3a5a3a', color: '#4a8a4a' }}
           >
-            ✕
+            X
           </button>
         </div>
 
@@ -531,7 +526,7 @@ function FocusDetailModal({
                       border: `1px solid ${n.status === 'completed' ? '#00e67644' : '#3a3a3a44'}`,
                     }}
                   >
-                    {n.status === 'completed' ? '✓' : '✕'} {n.name}
+                    {n.name}
                   </div>
                 ))}
               </div>
@@ -572,7 +567,7 @@ function FocusDetailModal({
               </p>
               <ul className="text-xs mt-1" style={{ color: '#8a5a5a' }}>
                 {unmetPreqs.map(n => (
-                  <li key={n.id}>• {n.name}</li>
+                  <li key={n.id}>- {n.name}</li>
                 ))}
               </ul>
             </div>
@@ -632,7 +627,7 @@ export function FocusTree({ tree, playerFaction, onClose, onStartFocus, onChoose
             NATIONAL FOCUS TREE
           </h2>
           <span className="text-xs uppercase tracking-widest" style={{ color: '#3a5a3a' }}>
-            {playerFaction === 'ussr' ? '☭ USSR' : '★ USA'}
+            {playerFaction === 'ussr' ? 'USSR' : 'USA'}
           </span>
         </div>
         <div className="flex items-center gap-6">
@@ -675,7 +670,7 @@ export function FocusTree({ tree, playerFaction, onClose, onStartFocus, onChoose
             >
               {tab.label}
               {hasPoliticalAlert && (
-                <span className="ml-1 text-xs" style={{ color: '#ffdd44' }}>●</span>
+                <span className="ml-1 text-xs" style={{ color: '#ffdd44' }}>!</span>
               )}
             </button>
           );

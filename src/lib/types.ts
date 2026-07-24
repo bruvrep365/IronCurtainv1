@@ -46,7 +46,6 @@ export interface FocusNode {
   effects: FocusEffect;
   x: number;
   y: number;
-  icon: string;
 }
 
 export interface FocusEffect {
