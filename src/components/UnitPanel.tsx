@@ -48,7 +48,11 @@ export function UnitPanel({ selectedCountry, units, playerFaction, selectedUnitI
     const adjacent = current.neighbors.includes(target);
     const hasNavy = Object.values(units).some(u => u.owner === playerFaction && u.type === 'navy' && u.countryId === unit.countryId);
     const canReach = adjacent || (hasNavy && dest.coastal && current.coastal);
-    return canReach && dest.alignment !== 'warsaw' && dest.alignment !== 'communist' && dest.alignment !== 'nato' && dest.alignment !== 'western';
+    if (!canReach) return false;
+    const isEnemy = playerFaction === 'usa'
+      ? (dest.alignment === 'warsaw' || dest.alignment === 'communist')
+      : (dest.alignment === 'nato' || dest.alignment === 'western');
+    return !isEnemy;
   };
 
   const canAttack = (unit: Unit | null, target: string) => {

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { feature, merge } from 'topojson-client';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker } from 'react-simple-maps';
-import { Country, ChinaCivilWar } from '../lib/types';
+import { Country, ChinaCivilWar, Unit, State } from '../lib/types';
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
@@ -157,6 +157,10 @@ interface WorldMapProps {
   selectedCountryId: string | null;
   onCountryClick: (id: string) => void;
   chinaCivilWar?: ChinaCivilWar;
+  units?: Record<string, Unit>;
+  states?: Record<string, State>;
+  playerFaction?: 'usa' | 'ussr' | null;
+  selectedUnitId?: string | null;
 }
 
 // ISO codes that belong to the USSR
@@ -168,7 +172,7 @@ const YUGO_ISOS = new Set(['688','191','070','705','499','807']);
 // ISO codes that belong to Czechoslovakia (Czechia + Slovakia in world-atlas)
 const CZECHO_ISOS = new Set(['203','703']);
 
-export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCivilWar }: WorldMapProps) {
+export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCivilWar, units, states, playerFaction, selectedUnitId }: WorldMapProps) {
   /** True while the civil war is still active (provinces are split between factions) */
   const warOngoing = !!chinaCivilWar && !chinaCivilWar.resolved;
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -396,6 +400,41 @@ export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCi
                   }}
                 >
                   {label}
+                </text>
+              </Marker>
+            );
+          })}
+
+          {/* Unit markers */}
+          {units && states && Object.values(units).map(unit => {
+            const st = states[unit.stateId];
+            if (!st) return null;
+            const isPlayer = unit.owner === playerFaction;
+            const color = unit.owner === 'usa' ? '#3a8fd8' : '#d83a3a';
+            const size = unit.type === 'armor' ? 4 : unit.type === 'navy' ? 4.5 : unit.type === 'air' ? 3.5 : 3;
+            const isSelected = selectedUnitId === unit.id;
+            return (
+              <Marker key={unit.id} coordinates={[st.lon, st.lat] as [number, number]}>
+                <circle
+                  r={isSelected ? size + 2 : size}
+                  fill={color}
+                  stroke={isSelected ? '#00e676' : '#000'}
+                  strokeWidth={isSelected ? 1.5 : 0.5}
+                  opacity={isPlayer ? 0.95 : 0.7}
+                  style={{ cursor: 'pointer', pointerEvents: 'all' }}
+                />
+                <text
+                  textAnchor="middle"
+                  y={-size - 1.5}
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: '5px',
+                    fill: color,
+                    pointerEvents: 'none',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {unit.type === 'infantry' ? 'INF' : unit.type === 'armor' ? 'ARM' : unit.type === 'air' ? 'AIR' : 'NAV'}
                 </text>
               </Marker>
             );

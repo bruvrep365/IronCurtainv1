@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { GameState, Faction, UnitType, CombatResult, EventChoice, FocusTree, FocusNode, Unit, ChinaCivilWar, Country, PoliticalPath, GameEvent, CubanRevolution } from './lib/types';
+import { GameState, Faction, UnitType, CombatResult, EventChoice, FocusTree, FocusNode, Unit, ChinaCivilWar, Country, PoliticalPath, GameEvent, CubanRevolution, Alignment } from './lib/types';
 import { INITIAL_STATE, EVENTS, UNIT_TYPES, getUnitBuild, CHINA_COMMUNIST_ADVANCE_ORDER, CHINA_NATIONALIST_ADVANCE_ORDER } from './lib/constants';
 
 function resolveFocusNode(node: FocusNode, player: Faction, stats: GameState['usaStats']): GameState['usaStats'] {
@@ -10,6 +10,12 @@ function resolveFocusNode(node: FocusNode, player: Faction, stats: GameState['us
   if (node.effects.nuclearWarheads) nextStats.nuclearWarheads += node.effects.nuclearWarheads;
   if (node.effects.researchPoints) nextStats.researchPoints += node.effects.researchPoints;
   return nextStats;
+}
+
+function playerFactionIsEnemy(playerFaction: Faction, alignment: Alignment): boolean {
+  return playerFaction === 'usa'
+    ? (alignment === 'warsaw' || alignment === 'communist')
+    : (alignment === 'nato' || alignment === 'western');
 }
 
 function computeCombat(attacker: Unit[], defender: Unit[], attackerCountry: string, defenderCountry: string): CombatResult {
@@ -587,6 +593,7 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
       if (country) {
         updatedCountries[q2.countryId] = { ...country, military: Math.min(100, country.military + 5) };
       }
+      newTension = Math.min(100, newTension + 2);
     } else {
       remainingQueue.push(q2);
     }
@@ -992,9 +999,31 @@ export function useGameState() {
       } else if (actionId === 'move_unit') {
         if (targetId && s.selectedUnitId) {
           const unit = updatedUnits[s.selectedUnitId];
-          if (unit && unit.movesThisTurn === 0) {
-            updatedUnits[s.selectedUnitId] = { ...unit, stateId: targetId, countryId: targetId, movesThisTurn: 1 };
-            logMsg = `${UNIT_TYPES.find(u => u.type === unit.type)?.name} moved to ${updatedCountries[targetId]?.name}.`;
+          if (!unit || unit.owner !== s.playerFaction) {
+            logMsg = 'Not your unit.';
+          } else if (unit.movesThisTurn > 0) {
+            logMsg = 'Unit already moved this turn.';
+          } else {
+            const current = updatedCountries[unit.countryId];
+            const dest = updatedCountries[targetId];
+            if (!current || !dest) {
+              logMsg = 'Invalid territory.';
+            } else {
+              const adjacent = current.neighbors.includes(targetId);
+              const hasNavy = Object.values(updatedUnits).some(u => u.owner === s.playerFaction && u.type === 'navy' && u.countryId === unit.countryId);
+              const canReach = adjacent || (hasNavy && dest.coastal && current.coastal);
+              if (!canReach) {
+                logMsg = `${dest.name} is out of range.`;
+              } else {
+                const isEnemy = playerFactionIsEnemy(s.playerFaction, dest.alignment);
+                if (isEnemy) {
+                  logMsg = `Cannot move to enemy territory — use Attack instead.`;
+                } else {
+                  updatedUnits[s.selectedUnitId] = { ...unit, stateId: targetId, countryId: targetId, movesThisTurn: 1 };
+                  logMsg = `${UNIT_TYPES.find(u => u.type === unit.type)?.name} moved to ${dest.name}.`;
+                }
+              }
+            }
           }
         }
       } else if (actionId === 'attack') {
@@ -1061,17 +1090,28 @@ export function useGameState() {
           }
         }
       } else if (actionId === 'build_unit') {
-        if (targetId && s.selectedUnitId) {
-          const b = UNIT_TYPES.find(u => u.type === s.selectedUnitId as UnitType);
+        if (targetId) {
+          const [unitType, country] = targetId.split(':');
+          const b = UNIT_TYPES.find(u => u.type === unitType as UnitType);
           if (!b) return s;
+          const dest = updatedCountries[country];
+          if (!dest) return s;
+          const playerAlliance = s.playerFaction === 'usa' ? ['nato', 'western'] : ['warsaw', 'communist'];
+          const isOwnOrAlly = playerAlliance.includes(dest.alignment) ||
+            (s.playerFaction === 'usa' && country === 'usa') ||
+            (s.playerFaction === 'ussr' && country === 'ussr');
+          if (!isOwnOrAlly) {
+            logMsg = `Cannot build in ${dest.name} — not friendly territory.`;
+            newStats.actionPoints += 1;
+            return { ...s, logs: [...s.logs, logMsg], ...(s.playerFaction === 'usa' ? { usaStats: newStats } : { ussrStats: newStats }) };
+          }
           if (newStats.productionPoints < b.cost) {
             logMsg = `Not enough Production Points. Need ${b.cost}, have ${newStats.productionPoints}.`;
             return { ...s, logs: [...s.logs, logMsg] };
           }
-          const country = targetId;
           newStats.productionPoints -= b.cost;
           const queue = [...s.buildQueue, { unitType: b.type, countryId: country, turnsRemaining: b.buildTime }];
-          logMsg = `${b.name} queued in ${updatedCountries[country]?.name}. ${b.buildTime} turns.`;
+          logMsg = `${b.name} queued in ${dest.name}. ${b.buildTime} turns.`;
           return {
             ...s,
             logs: [...s.logs, logMsg],

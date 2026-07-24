@@ -329,7 +329,7 @@ export function GameApp() {
                 onSelectUnit={selectUnit}
                 onMoveUnit={(target) => performAction('move_unit', target)}
                 onAttack={(target) => performAction('attack', target)}
-                onBuildUnit={(type, country) => performAction('build_unit', country)}
+                onBuildUnit={(type, country) => performAction('build_unit', `${type}:${country}`)}
                 productionPoints={pStats.productionPoints}
                 actionPoints={pStats.actionPoints}
               />
@@ -354,6 +354,10 @@ export function GameApp() {
             selectedCountryId={state.selectedCountryId}
             onCountryClick={selectCountry}
             chinaCivilWar={state.chinaCivilWar}
+            units={state.units}
+            states={state.states}
+            playerFaction={state.playerFaction}
+            selectedUnitId={state.selectedUnitId}
           />
         </div>
 
