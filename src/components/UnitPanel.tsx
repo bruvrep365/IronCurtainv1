@@ -51,15 +51,11 @@ export function UnitPanel({ selectedCountry, units, playerFaction, selectedUnitI
     if (!canReach) return false;
     const isOwn = (playerFaction === 'usa' && target === 'usa') || (playerFaction === 'ussr' && target === 'ussr');
     if (isOwn) return true;
-    const isEnemy = playerFaction === 'usa'
-      ? (dest.alignment === 'warsaw' || dest.alignment === 'communist')
-      : (dest.alignment === 'nato' || dest.alignment === 'western');
     const isAllied = playerFaction === 'usa'
       ? ((dest.alignment === 'nato' || dest.alignment === 'western') && target !== 'usa')
       : ((dest.alignment === 'warsaw' || dest.alignment === 'communist') && target !== 'ussr');
     if (isAllied) return true;
-    if (dest.alignment === 'nonaligned') return false;
-    return isEnemy;
+    return false;
   };
 
   const canAttack = (unit: Unit | null, target: string) => {
@@ -87,7 +83,7 @@ export function UnitPanel({ selectedCountry, units, playerFaction, selectedUnitI
         <div className="border p-2" style={{ borderColor: '#00aa44', background: '#0d1a0d' }}>
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs font-bold" style={{ color: TYPE_COLORS[selectedUnit.type] }}>
-              {TYPE_ICONS[selectedUnit.type]} {UNIT_TYPES.find(u => u.type === selectedUnit.type)?.name}
+              {TYPE_ICONS[selectedUnit.type]} {selectedUnit.name}
             </span>
             <span className="text-xs" style={{ color: selectedUnit.movesThisTurn === 0 ? '#4a8a4a' : '#8a4a4a' }}>
               {selectedUnit.movesThisTurn === 0 ? 'READY' : 'MOVED'}
@@ -152,7 +148,7 @@ export function UnitPanel({ selectedCountry, units, playerFaction, selectedUnitI
             >
               <span>
                 <span className="font-bold mr-2">{TYPE_ICONS[u.type]}</span>
-                {UNIT_TYPES.find(ut => ut.type === u.type)?.name}
+                {u.name}
                 <span className="ml-2" style={{ color: '#4a5a4a' }}>{u.strength}/{u.maxStrength}</span>
               </span>
               <span className="text-xs" style={{ color: u.movesThisTurn === 0 ? '#4a8a4a' : '#3a3a3a' }}>
@@ -172,7 +168,7 @@ export function UnitPanel({ selectedCountry, units, playerFaction, selectedUnitI
             {enemyUnits.map(u => (
               <div key={u.id} className="px-2 py-1.5 border text-xs" style={{ borderColor: '#2a0d0d', color: '#8a4a4a' }}>
                 <span className="font-bold mr-2">{TYPE_ICONS[u.type]}</span>
-                {UNIT_TYPES.find(ut => ut.type === u.type)?.name}
+                {u.name}
                 <span className="ml-2" style={{ color: '#4a5a4a' }}>{u.strength}/{u.maxStrength}</span>
               </div>
             ))}

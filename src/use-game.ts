@@ -28,13 +28,9 @@ function playerFactionIsAllied(playerFaction: Faction, alignment: Alignment): bo
 function canMoveInto(playerFaction: Faction, destCountry: { alignment: Alignment; id: string } | undefined): boolean {
   if (!destCountry) return false;
   const isOwn = (playerFaction === 'usa' && destCountry.id === 'usa') || (playerFaction === 'ussr' && destCountry.id === 'ussr');
-  const isEnemy = playerFactionIsEnemy(playerFaction, destCountry.alignment);
   const isAllied = playerFactionIsAllied(playerFaction, destCountry.alignment);
-  const isNeutral = destCountry.alignment === 'nonaligned';
   if (isOwn) return true;
   if (isAllied) return true;
-  if (isEnemy) return true;
-  if (isNeutral) return false;
   return false;
 }
 
@@ -1038,9 +1034,12 @@ export function useGameState() {
               } else {
                 const moveOk = canMoveInto(s.playerFaction!, dest);
                 if (!moveOk) {
+                  const isEnemy = playerFactionIsEnemy(s.playerFaction!, dest.alignment);
                   const isNeutral = dest.alignment === 'nonaligned';
-                  if (isNeutral) {
-                    logMsg = `Cannot move to ${dest.name} — neutral. Not at war.`;
+                  if (isEnemy) {
+                    logMsg = `Cannot move to ${dest.name} — enemy territory. Use Attack to engage.`;
+                  } else if (isNeutral) {
+                    logMsg = `Cannot move to ${dest.name} — neutral. Not allied.`;
                   } else {
                     logMsg = `Cannot move to ${dest.name}.`;
                   }

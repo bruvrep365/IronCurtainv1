@@ -448,7 +448,7 @@ export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCi
             );
           })}
 
-          {/* Unit markers with NATO APP-6 symbols — anti-stacking by grouping per country */}
+          {/* Unit markers with NATO APP-6 symbols — ring layout so units never overlap */}
           {units && states && (() => {
             type PlacedUnit = { unit: Unit; baseLon: number; baseLat: number; angle: number; radius: number };
             const byCountry: Record<string, PlacedUnit[]> = {};
@@ -459,33 +459,30 @@ export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCi
               arr.push({ unit, baseLon: st.lon, baseLat: st.lat, angle: 0, radius: 0 });
             });
             const allPlaced: PlacedUnit[] = [];
-            // Vogel's sunflower layout: each unit gets a unique angular position
-            // and a radius that grows with index, so units spread out in a spiral.
-            const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
-            const SPACING = 7.0; // km between adjacent markers — wide enough to read
+            // Ring layout: first unit at center, remaining units placed on concentric
+            // rings. Each ring holds up to 6 units spaced 60° apart. Ring radius
+            // grows by RING_STEP (in degrees) so markers are visually distinct.
+            const RING_STEP = 1.6;        // degrees between rings (~175 km at equator)
+            const PER_RING = 6;           // units per ring
+            const RING_OFFSET = 0.4;      // angular offset so ring 2 sits between ring 1's gaps
             Object.values(byCountry).forEach(arr => {
               arr.forEach((pu, i) => {
                 if (i === 0) {
                   pu.angle = 0;
                   pu.radius = 0;
                 } else {
-                  const r = SPACING * Math.sqrt(i);
-                  const theta = i * GOLDEN_ANGLE;
-                  pu.angle = theta;
-                  pu.radius = r;
+                  const ringIdx = Math.ceil((i) / PER_RING) - 1;     // 0-based ring
+                  const inRing = (i - 1) % PER_RING;                  // 0..5 position within ring
+                  const ringCount = Math.min(PER_RING, arr.length - 1 - ringIdx * PER_RING);
+                  pu.radius = (ringIdx + 1) * RING_STEP;
+                  pu.angle = (inRing / ringCount) * Math.PI * 2 + (ringIdx % 2) * RING_OFFSET;
                 }
                 allPlaced.push(pu);
               });
             });
-            const deg2rad = (d: number) => d * Math.PI / 180;
-            const latKm = 111;
             return allPlaced.map(({ unit, baseLon, baseLat, angle, radius }) => {
-              const lonKmLocal = 111 * Math.cos(deg2rad(baseLat));
-              const dLon = (radius * Math.cos(angle)) / lonKmLocal;
-              const dLat = (radius * Math.sin(angle)) / latKm;
-              const lon = baseLon + dLon;
-              const lat = baseLat + dLat;
-              const isPlayer = unit.owner === playerFaction;
+              const lon = baseLon + radius * Math.cos(angle);
+              const lat = baseLat + radius * Math.sin(angle);
               const friendly = unit.owner === 'usa' || unit.owner === playerFaction;
               const frameColor = unit.owner === 'usa' ? '#3a8fd8' : '#d83a3a';
               const frameFill = unit.owner === 'usa' ? 'rgba(58,143,216,0.25)' : 'rgba(216,58,58,0.25)';
