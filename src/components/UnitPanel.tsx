@@ -57,7 +57,7 @@ export function UnitPanel({ selectedCountry, units, playerFaction, selectedUnitI
     const isAllied = playerFaction === 'usa'
       ? ((dest.alignment === 'nato' || dest.alignment === 'western') && target !== 'usa')
       : ((dest.alignment === 'warsaw' || dest.alignment === 'communist') && target !== 'ussr');
-    if (isAllied) return false;
+    if (isAllied) return true;
     if (dest.alignment === 'nonaligned') return false;
     return isEnemy;
   };

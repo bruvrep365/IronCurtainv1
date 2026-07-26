@@ -459,13 +459,20 @@ export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCi
               arr.push({ unit, baseLon: st.lon, baseLat: st.lat, angle: 0, radius: 0 });
             });
             const allPlaced: PlacedUnit[] = [];
+            // Vogel's sunflower layout: each unit gets a unique angular position
+            // and a radius that grows with index, so units spread out in a spiral.
+            const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+            const SPACING = 7.0; // km between adjacent markers — wide enough to read
             Object.values(byCountry).forEach(arr => {
               arr.forEach((pu, i) => {
                 if (i === 0) {
-                  pu.angle = 0; pu.radius = 0;
+                  pu.angle = 0;
+                  pu.radius = 0;
                 } else {
-                  pu.angle = (i - 1) * (Math.PI * 2 / Math.max(1, arr.length - 1));
-                  pu.radius = 3.5;
+                  const r = SPACING * Math.sqrt(i);
+                  const theta = i * GOLDEN_ANGLE;
+                  pu.angle = theta;
+                  pu.radius = r;
                 }
                 allPlaced.push(pu);
               });
@@ -483,7 +490,7 @@ export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCi
               const frameColor = unit.owner === 'usa' ? '#3a8fd8' : '#d83a3a';
               const frameFill = unit.owner === 'usa' ? 'rgba(58,143,216,0.25)' : 'rgba(216,58,58,0.25)';
               const isSelected = selectedUnitId === unit.id;
-              const s = 3;
+              const s = 3.5;
               const frameType = friendly ? 'rect' : 'diamond';
               return (
                 <Marker key={unit.id} coordinates={[lon, lat] as [number, number]}>
