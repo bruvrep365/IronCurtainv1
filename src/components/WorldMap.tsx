@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { feature, merge } from 'topojson-client';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker } from 'react-simple-maps';
@@ -172,6 +172,117 @@ const YUGO_ISOS = new Set(['688','191','070','705','499','807']);
 // ISO codes that belong to Czechoslovakia (Czechia + Slovakia in world-atlas)
 const CZECHO_ISOS = new Set(['203','703']);
 
+// ---- Unit position computation (ring layout so markers never overlap) ----
+const RING_STEP = 5;        // degrees between rings — wide enough to read each symbol
+const PER_RING = 6;         // units per ring
+const RING_OFFSET = 0.4;    // angular offset so ring 2 sits between ring 1's gaps
+
+function computeUnitPositions(
+  units: Record<string, Unit>,
+  states: Record<string, State>
+): Record<string, { lon: number; lat: number }> {
+  type Entry = { unitId: string; baseLon: number; baseLat: number };
+  const byCountry: Record<string, Entry[]> = {};
+  Object.values(units).forEach(unit => {
+    const st = states[unit.stateId];
+    if (!st) return;
+    const arr = byCountry[unit.countryId] || (byCountry[unit.countryId] = []);
+    arr.push({ unitId: unit.id, baseLon: st.lon, baseLat: st.lat });
+  });
+
+  const result: Record<string, { lon: number; lat: number }> = {};
+  Object.values(byCountry).forEach(arr => {
+    arr.forEach((e, i) => {
+      if (i === 0) {
+        result[e.unitId] = { lon: e.baseLon, lat: e.baseLat };
+      } else {
+        const ringIdx = Math.ceil(i / PER_RING) - 1;
+        const inRing = (i - 1) % PER_RING;
+        const ringCount = Math.min(PER_RING, arr.length - 1 - ringIdx * PER_RING);
+        const radius = (ringIdx + 1) * RING_STEP;
+        const angle = (inRing / ringCount) * Math.PI * 2 + (ringIdx % 2) * RING_OFFSET;
+        result[e.unitId] = {
+          lon: e.baseLon + radius * Math.cos(angle),
+          lat: e.baseLat + radius * Math.sin(angle),
+        };
+      }
+    });
+  });
+  return result;
+}
+
+// ---- Smooth animation hook ----
+// Eases each unit's on-screen position toward its target over `duration` ms
+// using requestAnimationFrame, so units visibly slide to their new country.
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function useAnimatedPositions(
+  targets: Record<string, { lon: number; lat: number }>,
+  duration: number
+): Record<string, { lon: number; lat: number }> {
+  const [current, setCurrent] = useState<Record<string, { lon: number; lat: number }>>(() => ({ ...targets }));
+  const currentRef = useRef(current);
+  const startRef = useRef<Record<string, { lon: number; lat: number }>>({});
+  const startTimeRef = useRef<number>(0);
+  const rafRef = useRef<number | null>(null);
+  const targetsRef = useRef(targets);
+
+  // Keep refs in sync
+  useEffect(() => { targetsRef.current = targets; });
+
+  const tick = useCallback(() => {
+    const elapsed = performance.now() - startTimeRef.current;
+    const t = Math.min(1, elapsed / duration);
+    const eased = easeOutCubic(t);
+
+    const next: Record<string, { lon: number; lat: number }> = {};
+    const tgts = targetsRef.current;
+    const starts = startRef.current;
+    for (const id of Object.keys(tgts)) {
+      const start = starts[id];
+      const target = tgts[id];
+      if (!start) {
+        // New unit — appear at target immediately
+        next[id] = target;
+      } else {
+        next[id] = {
+          lon: start.lon + (target.lon - start.lon) * eased,
+          lat: start.lat + (target.lat - start.lat) * eased,
+        };
+      }
+    }
+    currentRef.current = next;
+    setCurrent(next);
+
+    if (t < 1) {
+      rafRef.current = requestAnimationFrame(tick);
+    } else {
+      rafRef.current = null;
+    }
+  }, [duration]);
+
+  useEffect(() => {
+    // When targets change, capture start positions from current positions
+    startRef.current = {};
+    const cur = currentRef.current;
+    for (const id of Object.keys(targets)) {
+      startRef.current[id] = cur[id] ? { ...cur[id] } : { ...targets[id] };
+    }
+    startTimeRef.current = performance.now();
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [targets, tick]);
+
+  return current;
+}
+
 // NATO APP-6 standard symbols drawn as SVG. The frame shape distinguishes
 // friendly (rectangle) from hostile (diamond); the inner icon identifies the unit type.
 function renderNatoIcon(type: UnitType, color: string) {
@@ -253,6 +364,14 @@ export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCi
       })
       .catch(() => null);
   }, []);
+
+  // Compute target positions for all units (ring layout) and animate markers
+  // toward those targets so units visibly slide to their new country when moved.
+  const targetPositions = useMemo(
+    () => (units && states ? computeUnitPositions(units, states) : {}),
+    [units, states]
+  );
+  const animatedPositions = useAnimatedPositions(targetPositions, 800);
 
   return (
     <div className="w-full h-full" style={{ background: '#060c06' }}>
@@ -448,65 +567,33 @@ export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCi
             );
           })}
 
-          {/* Unit markers with NATO APP-6 symbols — ring layout so units never overlap */}
-          {units && states && (() => {
-            type PlacedUnit = { unit: Unit; baseLon: number; baseLat: number; angle: number; radius: number };
-            const byCountry: Record<string, PlacedUnit[]> = {};
-            Object.values(units).forEach(unit => {
-              const st = states[unit.stateId];
-              if (!st) return;
-              const arr = byCountry[unit.countryId] || (byCountry[unit.countryId] = []);
-              arr.push({ unit, baseLon: st.lon, baseLat: st.lat, angle: 0, radius: 0 });
-            });
-            const allPlaced: PlacedUnit[] = [];
-            // Ring layout: first unit at center, remaining units placed on concentric
-            // rings. Each ring holds up to 6 units spaced 60° apart. Ring radius
-            // grows by RING_STEP (in degrees) so markers are visually distinct.
-            const RING_STEP = 1.6;        // degrees between rings (~175 km at equator)
-            const PER_RING = 6;           // units per ring
-            const RING_OFFSET = 0.4;      // angular offset so ring 2 sits between ring 1's gaps
-            Object.values(byCountry).forEach(arr => {
-              arr.forEach((pu, i) => {
-                if (i === 0) {
-                  pu.angle = 0;
-                  pu.radius = 0;
-                } else {
-                  const ringIdx = Math.ceil((i) / PER_RING) - 1;     // 0-based ring
-                  const inRing = (i - 1) % PER_RING;                  // 0..5 position within ring
-                  const ringCount = Math.min(PER_RING, arr.length - 1 - ringIdx * PER_RING);
-                  pu.radius = (ringIdx + 1) * RING_STEP;
-                  pu.angle = (inRing / ringCount) * Math.PI * 2 + (ringIdx % 2) * RING_OFFSET;
-                }
-                allPlaced.push(pu);
-              });
-            });
-            return allPlaced.map(({ unit, baseLon, baseLat, angle, radius }) => {
-              const lon = baseLon + radius * Math.cos(angle);
-              const lat = baseLat + radius * Math.sin(angle);
-              const friendly = unit.owner === 'usa' || unit.owner === playerFaction;
-              const frameColor = unit.owner === 'usa' ? '#3a8fd8' : '#d83a3a';
-              const frameFill = unit.owner === 'usa' ? 'rgba(58,143,216,0.25)' : 'rgba(216,58,58,0.25)';
-              const isSelected = selectedUnitId === unit.id;
-              const s = 3.5;
-              const frameType = friendly ? 'rect' : 'diamond';
-              return (
-                <Marker key={unit.id} coordinates={[lon, lat] as [number, number]}>
-                  {/* Selection ring */}
-                  {isSelected && (
-                    <circle r={s + 2.5} fill="none" stroke="#00e676" strokeWidth={1} opacity={0.9} />
-                  )}
-                  {/* NATO APP-6 frame: rectangle for friendly, diamond for hostile */}
-                  {frameType === 'rect' ? (
-                    <rect x={-s} y={-s} width={s * 2} height={s * 2} fill={frameFill} stroke={frameColor} strokeWidth={isSelected ? 1 : 0.6} />
-                  ) : (
-                    <polygon points={`0,${-s * 1.4} ${s * 1.4},0 0,${s * 1.4} ${-s * 1.4},0`} fill={frameFill} stroke={frameColor} strokeWidth={isSelected ? 1 : 0.6} />
-                  )}
-                  {/* NATO APP-6 icon inside frame */}
-                  {renderNatoIcon(unit.type, frameColor)}
-                </Marker>
-              );
-            });
-          })()}
+          {/* Unit markers with NATO APP-6 symbols — animated ring layout */}
+          {units && states && Object.values(units).map(unit => {
+            const pos = animatedPositions[unit.id];
+            if (!pos) return null;
+            const friendly = unit.owner === 'usa' || unit.owner === playerFaction;
+            const frameColor = unit.owner === 'usa' ? '#3a8fd8' : '#d83a3a';
+            const frameFill = unit.owner === 'usa' ? 'rgba(58,143,216,0.25)' : 'rgba(216,58,58,0.25)';
+            const isSelected = selectedUnitId === unit.id;
+            const s = 3.5;
+            const frameType = friendly ? 'rect' : 'diamond';
+            return (
+              <Marker key={unit.id} coordinates={[pos.lon, pos.lat] as [number, number]}>
+                {/* Selection ring */}
+                {isSelected && (
+                  <circle r={s + 2.5} fill="none" stroke="#00e676" strokeWidth={1} opacity={0.9} />
+                )}
+                {/* NATO APP-6 frame: rectangle for friendly, diamond for hostile */}
+                {frameType === 'rect' ? (
+                  <rect x={-s} y={-s} width={s * 2} height={s * 2} fill={frameFill} stroke={frameColor} strokeWidth={isSelected ? 1 : 0.6} />
+                ) : (
+                  <polygon points={`0,${-s * 1.4} ${s * 1.4},0 0,${s * 1.4} ${-s * 1.4},0`} fill={frameFill} stroke={frameColor} strokeWidth={isSelected ? 1 : 0.6} />
+                )}
+                {/* NATO APP-6 icon inside frame */}
+                {renderNatoIcon(unit.type, frameColor)}
+              </Marker>
+            );
+          })}
         </ZoomableGroup>
       </ComposableMap>
 
