@@ -1,4 +1,5 @@
 import { Country, GameState, GameEvent, PlayerStats, UnitBuild, FocusTree, State, Unit, UnitType, Alignment, Faction } from './types';
+import { generateUnitName } from './unit-names';
 
 export const UNIT_TYPES: UnitBuild[] = [
   { id: 'infantry', type: 'infantry', name: 'Infantry Division', icon: 'swords', cost: 50, strength: 20, buildTime: 1, maintenance: 3, terrain: 'land', description: 'Basic ground force. Cheap and reliable. Best for defense and garrison duty.' },
@@ -440,8 +441,9 @@ const INITIAL_PLAYER_STATS: PlayerStats = {
   allies: [], manpower: 500, productionPoints: 0, totalUnits: 0, maintenanceCost: 0, military: 50,
 };
 
-function buildUnit(id: string, type: UnitType, stateId: string, countryId: string, owner: Faction, name: string): Unit {
+function buildUnit(id: string, type: UnitType, stateId: string, countryId: string, owner: Faction, _name?: string): Unit {
   const b = getUnitBuild(type);
+  const name = generateUnitName(type, countryId, owner);
   return { id, type, strength: b.strength, maxStrength: b.strength, stateId, countryId, owner, movesThisTurn: 0, name };
 }
 

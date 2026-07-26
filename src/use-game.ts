@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { GameState, Faction, UnitType, CombatResult, EventChoice, FocusTree, FocusNode, Unit, ChinaCivilWar, Country, PoliticalPath, GameEvent, CubanRevolution, Alignment } from './lib/types';
 import { INITIAL_STATE, EVENTS, UNIT_TYPES, getUnitBuild, CHINA_COMMUNIST_ADVANCE_ORDER, CHINA_NATIONALIST_ADVANCE_ORDER } from './lib/constants';
+import { generateUnitName } from './lib/unit-names';
 
 function resolveFocusNode(node: FocusNode, player: Faction, stats: GameState['usaStats']): GameState['usaStats'] {
   let nextStats = { ...stats };
@@ -16,6 +17,25 @@ function playerFactionIsEnemy(playerFaction: Faction, alignment: Alignment): boo
   return playerFaction === 'usa'
     ? (alignment === 'warsaw' || alignment === 'communist')
     : (alignment === 'nato' || alignment === 'western');
+}
+
+function playerFactionIsAllied(playerFaction: Faction, alignment: Alignment): boolean {
+  return playerFaction === 'usa'
+    ? (alignment === 'nato' || alignment === 'western')
+    : (alignment === 'warsaw' || alignment === 'communist');
+}
+
+function canMoveInto(playerFaction: Faction, destCountry: { alignment: Alignment; id: string } | undefined): boolean {
+  if (!destCountry) return false;
+  const isOwn = (playerFaction === 'usa' && destCountry.id === 'usa') || (playerFaction === 'ussr' && destCountry.id === 'ussr');
+  const isEnemy = playerFactionIsEnemy(playerFaction, destCountry.alignment);
+  const isAllied = playerFactionIsAllied(playerFaction, destCountry.alignment);
+  const isNeutral = destCountry.alignment === 'nonaligned';
+  if (isOwn) return true;
+  if (isEnemy) return true;
+  if (isAllied) return false;
+  if (isNeutral) return false;
+  return false;
 }
 
 function computeCombat(attacker: Unit[], defender: Unit[], attackerCountry: string, defenderCountry: string): CombatResult {
@@ -578,6 +598,7 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
     if (q2.turnsRemaining <= 0) {
       const b = getUnitBuild(q2.unitType);
       const fid = (state.playerFaction === 'usa' ? 'usa' : 'ussr') + '_u' + Math.floor(Math.random() * 100000);
+      const unitName = generateUnitName(q2.unitType, q2.countryId, state.playerFaction!);
       updatedUnits[fid] = {
         id: fid,
         type: q2.unitType,
@@ -587,7 +608,7 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
         countryId: q2.countryId,
         owner: state.playerFaction!,
         movesThisTurn: 0,
-        name: b.name,
+        name: unitName,
       };
       const country = updatedCountries[q2.countryId];
       if (country) {
@@ -1015,12 +1036,20 @@ export function useGameState() {
               if (!canReach) {
                 logMsg = `${dest.name} is out of range.`;
               } else {
-                const isEnemy = playerFactionIsEnemy(s.playerFaction, dest.alignment);
-                if (isEnemy) {
-                  logMsg = `Cannot move to enemy territory — use Attack instead.`;
+                const moveOk = canMoveInto(s.playerFaction!, dest);
+                if (!moveOk) {
+                  const isAllied = playerFactionIsAllied(s.playerFaction!, dest.alignment);
+                  const isNeutral = dest.alignment === 'nonaligned';
+                  if (isAllied) {
+                    logMsg = `Cannot move to ${dest.name} — allied territory. Use your own or enemy territory.`;
+                  } else if (isNeutral) {
+                    logMsg = `Cannot move to ${dest.name} — neutral. Not at war.`;
+                  } else {
+                    logMsg = `Cannot move to ${dest.name}.`;
+                  }
                 } else {
                   updatedUnits[s.selectedUnitId] = { ...unit, stateId: targetId, countryId: targetId, movesThisTurn: 1 };
-                  logMsg = `${UNIT_TYPES.find(u => u.type === unit.type)?.name} moved to ${dest.name}.`;
+                  logMsg = `${unit.name} moved to ${dest.name}.`;
                 }
               }
             }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { feature, merge } from 'topojson-client';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import { ComposableMap, Geographies, Geography, ZoomableGroup, Marker } from 'react-simple-maps';
-import { Country, ChinaCivilWar, Unit, State } from '../lib/types';
+import { Country, ChinaCivilWar, Unit, State, UnitType } from '../lib/types';
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
@@ -171,6 +171,49 @@ const YUGO_ISOS = new Set(['688','191','070','705','499','807']);
 
 // ISO codes that belong to Czechoslovakia (Czechia + Slovakia in world-atlas)
 const CZECHO_ISOS = new Set(['203','703']);
+
+// NATO APP-6 standard symbols drawn as SVG. The frame shape distinguishes
+// friendly (rectangle) from hostile (diamond); the inner icon identifies the unit type.
+function renderNatoIcon(type: UnitType, color: string) {
+  const ic = 2; // icon half-size
+  switch (type) {
+    case 'infantry':
+      // Two crossed lines (X) — NATO infantry symbol
+      return (
+        <g stroke={color} strokeWidth={0.7} fill="none" strokeLinecap="round">
+          <line x1={-ic} y1={-ic} x2={ic} y2={ic} />
+          <line x1={-ic} y1={ic} x2={ic} y2={-ic} />
+        </g>
+      );
+    case 'armor':
+      // Ellipse — NATO armor/armored symbol
+      return <ellipse cx={0} cy={0} rx={ic} ry={ic * 0.7} fill="none" stroke={color} strokeWidth={0.7} />;
+    case 'air':
+      // Curved arc (simplified aircraft wing arc) — NATO air symbol
+      return (
+        <path
+          d={`M ${-ic} ${ic * 0.3} Q 0 ${-ic * 1.2} ${ic} ${ic * 0.3}`}
+          fill="none"
+          stroke={color}
+          strokeWidth={0.7}
+          strokeLinecap="round"
+        />
+      );
+    case 'navy':
+      // Wavy line — NATO naval symbol
+      return (
+        <path
+          d={`M ${-ic} 0 Q ${-ic / 2} ${-ic * 0.6} 0 0 T ${ic} 0`}
+          fill="none"
+          stroke={color}
+          strokeWidth={0.7}
+          strokeLinecap="round"
+        />
+      );
+    default:
+      return null;
+  }
+}
 
 export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCivilWar, units, states, playerFaction, selectedUnitId }: WorldMapProps) {
   /** True while the civil war is still active (provinces are split between factions) */
@@ -405,40 +448,61 @@ export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCi
             );
           })}
 
-          {/* Unit markers */}
-          {units && states && Object.values(units).map(unit => {
-            const st = states[unit.stateId];
-            if (!st) return null;
-            const isPlayer = unit.owner === playerFaction;
-            const color = unit.owner === 'usa' ? '#3a8fd8' : '#d83a3a';
-            const size = unit.type === 'armor' ? 4 : unit.type === 'navy' ? 4.5 : unit.type === 'air' ? 3.5 : 3;
-            const isSelected = selectedUnitId === unit.id;
-            return (
-              <Marker key={unit.id} coordinates={[st.lon, st.lat] as [number, number]}>
-                <circle
-                  r={isSelected ? size + 2 : size}
-                  fill={color}
-                  stroke={isSelected ? '#00e676' : '#000'}
-                  strokeWidth={isSelected ? 1.5 : 0.5}
-                  opacity={isPlayer ? 0.95 : 0.7}
-                  style={{ cursor: 'pointer', pointerEvents: 'all' }}
-                />
-                <text
-                  textAnchor="middle"
-                  y={-size - 1.5}
-                  style={{
-                    fontFamily: 'monospace',
-                    fontSize: '5px',
-                    fill: color,
-                    pointerEvents: 'none',
-                    fontWeight: 'bold',
-                  }}
-                >
-                  {unit.type === 'infantry' ? 'INF' : unit.type === 'armor' ? 'ARM' : unit.type === 'air' ? 'AIR' : 'NAV'}
-                </text>
-              </Marker>
-            );
-          })}
+          {/* Unit markers with NATO APP-6 symbols — anti-stacking by grouping per country */}
+          {units && states && (() => {
+            type PlacedUnit = { unit: Unit; baseLon: number; baseLat: number; angle: number; radius: number };
+            const byCountry: Record<string, PlacedUnit[]> = {};
+            Object.values(units).forEach(unit => {
+              const st = states[unit.stateId];
+              if (!st) return;
+              const arr = byCountry[unit.countryId] || (byCountry[unit.countryId] = []);
+              arr.push({ unit, baseLon: st.lon, baseLat: st.lat, angle: 0, radius: 0 });
+            });
+            const allPlaced: PlacedUnit[] = [];
+            Object.values(byCountry).forEach(arr => {
+              arr.forEach((pu, i) => {
+                if (i === 0) {
+                  pu.angle = 0; pu.radius = 0;
+                } else {
+                  pu.angle = (i - 1) * (Math.PI * 2 / Math.max(1, arr.length - 1));
+                  pu.radius = 3.5;
+                }
+                allPlaced.push(pu);
+              });
+            });
+            const deg2rad = (d: number) => d * Math.PI / 180;
+            const latKm = 111;
+            return allPlaced.map(({ unit, baseLon, baseLat, angle, radius }) => {
+              const lonKmLocal = 111 * Math.cos(deg2rad(baseLat));
+              const dLon = (radius * Math.cos(angle)) / lonKmLocal;
+              const dLat = (radius * Math.sin(angle)) / latKm;
+              const lon = baseLon + dLon;
+              const lat = baseLat + dLat;
+              const isPlayer = unit.owner === playerFaction;
+              const friendly = unit.owner === 'usa' || unit.owner === playerFaction;
+              const frameColor = unit.owner === 'usa' ? '#3a8fd8' : '#d83a3a';
+              const frameFill = unit.owner === 'usa' ? 'rgba(58,143,216,0.25)' : 'rgba(216,58,58,0.25)';
+              const isSelected = selectedUnitId === unit.id;
+              const s = 3;
+              const frameType = friendly ? 'rect' : 'diamond';
+              return (
+                <Marker key={unit.id} coordinates={[lon, lat] as [number, number]}>
+                  {/* Selection ring */}
+                  {isSelected && (
+                    <circle r={s + 2.5} fill="none" stroke="#00e676" strokeWidth={1} opacity={0.9} />
+                  )}
+                  {/* NATO APP-6 frame: rectangle for friendly, diamond for hostile */}
+                  {frameType === 'rect' ? (
+                    <rect x={-s} y={-s} width={s * 2} height={s * 2} fill={frameFill} stroke={frameColor} strokeWidth={isSelected ? 1 : 0.6} />
+                  ) : (
+                    <polygon points={`0,${-s * 1.4} ${s * 1.4},0 0,${s * 1.4} ${-s * 1.4},0`} fill={frameFill} stroke={frameColor} strokeWidth={isSelected ? 1 : 0.6} />
+                  )}
+                  {/* NATO APP-6 icon inside frame */}
+                  {renderNatoIcon(unit.type, frameColor)}
+                </Marker>
+              );
+            });
+          })()}
         </ZoomableGroup>
       </ComposableMap>
 
