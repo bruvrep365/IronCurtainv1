@@ -25,27 +25,29 @@ export function GameApp() {
         {/* Darkened overlay so title text and buttons stay readable */}
         <div className="absolute inset-0 bg-black/70" />
         <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,0,0.05) 2px, rgba(0,255,0,0.05))' }} />
-        <div className="text-xs text-primary/40 tracking-widest mb-8 uppercase">CLASSIFIED — EYES ONLY // COLD WAR SIMULATION v2.0</div>
-        <h1 className="text-7xl font-bold text-primary tracking-widest uppercase mb-1" style={{ textShadow: '0 0 30px rgba(0,255,0,0.4)' }}>
-          IRON CURTAIN
-        </h1>
-        <p className="text-lg text-primary/60 mb-2 tracking-wider">A Cold War Grand Strategy Simulation</p>
-        <p className="text-sm text-primary/40 mb-12 tracking-widest">1947 – 1991</p>
-        <div className="text-xs text-primary/50 mb-8 max-w-lg text-center leading-relaxed">
-          Two superpowers. One world. Build armies, develop technologies, invade nations.
-          Manage the global economy, deploy the Focus Tree, and avoid nuclear war.
-        </div>
-        <div className="flex gap-6">
-          <button data-testid="button-play-usa" onClick={() => startGame('usa')}
-            className="px-10 py-5 text-xl font-bold uppercase tracking-widest border-2 transition-all duration-200 cursor-pointer hover:scale-105"
-            style={{ background: '#0d3b6e', borderColor: '#1a6abf', color: '#7ab8ff', boxShadow: '0 0 20px rgba(26,106,191,0.3)' }}>
-            ★ PLAY AS USA
-          </button>
-          <button data-testid="button-play-ussr" onClick={() => startGame('ussr')}
-            className="px-10 py-5 text-xl font-bold uppercase tracking-widest border-2 transition-all duration-200 cursor-pointer hover:scale-105"
-            style={{ background: '#6e0d0d', borderColor: '#bf1a1a', color: '#ffaaaa', boxShadow: '0 0 20px rgba(191,26,26,0.3)' }}>
-            ☭ PLAY AS USSR
-          </button>
+        <div className="relative z-10 flex flex-col items-center justify-center w-full">
+          <div className="text-xs text-primary/40 tracking-widest mb-8 uppercase">CLASSIFIED — EYES ONLY // COLD WAR SIMULATION v2.0</div>
+          <h1 className="text-7xl font-bold text-primary tracking-widest uppercase mb-1" style={{ textShadow: '0 0 30px rgba(0,255,0,0.4)' }}>
+            IRON CURTAIN
+          </h1>
+          <p className="text-lg text-primary/60 mb-2 tracking-wider">A Cold War Grand Strategy Simulation</p>
+          <p className="text-sm text-primary/40 mb-12 tracking-widest">1947 – 1991</p>
+          <div className="text-xs text-primary/50 mb-8 max-w-lg text-center leading-relaxed">
+            Two superpowers. One world. Build armies, develop technologies, invade nations.
+            Manage the global economy, deploy the Focus Tree, and avoid nuclear war.
+          </div>
+          <div className="flex gap-6">
+            <button data-testid="button-play-usa" onClick={() => startGame('usa')}
+              className="px-10 py-5 text-xl font-bold uppercase tracking-widest border-2 transition-all duration-200 cursor-pointer hover:scale-105"
+              style={{ background: '#0d3b6e', borderColor: '#1a6abf', color: '#7ab8ff', boxShadow: '0 0 20px rgba(26,106,191,0.3)' }}>
+              ★ PLAY AS USA
+            </button>
+            <button data-testid="button-play-ussr" onClick={() => startGame('ussr')}
+              className="px-10 py-5 text-xl font-bold uppercase tracking-widest border-2 transition-all duration-200 cursor-pointer hover:scale-105"
+              style={{ background: '#6e0d0d', borderColor: '#bf1a1a', color: '#ffaaaa', boxShadow: '0 0 20px rgba(191,26,26,0.3)' }}>
+              ☭ PLAY AS USSR
+            </button>
+          </div>
         </div>
       </div>
     );
