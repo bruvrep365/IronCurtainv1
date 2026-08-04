@@ -1026,27 +1026,23 @@ export function useGameState() {
             if (!current || !dest) {
               logMsg = 'Invalid territory.';
             } else {
-              const adjacent = current.neighbors.includes(targetId);
-              const hasNavy = Object.values(updatedUnits).some(u => u.owner === s.playerFaction && u.type === 'navy' && u.countryId === unit.countryId);
-              const canReach = adjacent || (hasNavy && dest.coastal && current.coastal);
-              if (!canReach) {
-                logMsg = `${dest.name} is out of range.`;
-              } else {
-                const moveOk = canMoveInto(s.playerFaction!, dest);
-                if (!moveOk) {
-                  const isEnemy = playerFactionIsEnemy(s.playerFaction!, dest.alignment);
-                  const isNeutral = dest.alignment === 'nonaligned';
-                  if (isEnemy) {
-                    logMsg = `Cannot move to ${dest.name} — enemy territory. Use Attack to engage.`;
-                  } else if (isNeutral) {
-                    logMsg = `Cannot move to ${dest.name} — neutral. Not allied.`;
-                  } else {
-                    logMsg = `Cannot move to ${dest.name}.`;
-                  }
+              const moveOk = canMoveInto(s.playerFaction!, dest);
+              if (!moveOk) {
+                const isEnemy = playerFactionIsEnemy(s.playerFaction!, dest.alignment);
+                const isNeutral = dest.alignment === 'nonaligned';
+                if (isEnemy) {
+                  logMsg = `Cannot move to ${dest.name} — enemy territory. Use Attack to engage.`;
+                } else if (isNeutral) {
+                  logMsg = `Cannot move to ${dest.name} — neutral. Not allied.`;
                 } else {
-                  updatedUnits[s.selectedUnitId] = { ...unit, stateId: targetId, countryId: targetId, movesThisTurn: 1 };
-                  logMsg = `${unit.name} moved to ${dest.name}.`;
+                  logMsg = `Cannot move to ${dest.name}.`;
                 }
+              } else {
+                // Units can be freely redeployed between allied nations and the
+                // player's own nation. Enemy/neutral territory still requires
+                // adjacency or a naval transport chain.
+                updatedUnits[s.selectedUnitId] = { ...unit, stateId: targetId, countryId: targetId, movesThisTurn: 1 };
+                logMsg = `${unit.name} moved to ${dest.name}.`;
               }
             }
           }

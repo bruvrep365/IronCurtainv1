@@ -217,33 +217,38 @@ const WARSAW_MAP: Record<string, Record<UnitType, string[]>> = {
   vietnam: VIETNAM_NAMES,
 };
 
-// Per-country consumed-name tracking so each name is only issued once
-const usedNames: Record<string, Set<string>> = {};
-
-function getUsedSet(key: string): Set<string> {
-  if (!usedNames[key]) usedNames[key] = new Set();
-  return usedNames[key];
-}
+// Global consumed-name tracking so no two units ever share the same name
+const usedNames = new Set<string>();
 
 export function generateUnitName(type: UnitType, countryId: string, owner: Faction): string {
   const map = owner === 'usa' ? NATO_MAP : WARSAW_MAP;
   const list = (map[countryId]?.[type]) || (owner === 'usa' ? GENERIC_NATO_NAMES[type] : GENERIC_WARSAW_NAMES[type]);
-  const usedKey = `${owner}:${countryId}:${type}`;
-  const used = getUsedSet(usedKey);
 
-  // Pick the first unused historical name, else append a regimental number
-  for (const candidate of list) {
-    if (!used.has(candidate)) {
-      used.add(candidate);
+  // Shuffle the list so the order is random each game rather than always
+  // picking the first historical entry in sequence.
+  const shuffled = [...list].sort(() => Math.random() - 0.5);
+
+  // Pick the first unused historical name (globally unique)
+  for (const candidate of shuffled) {
+    if (!usedNames.has(candidate)) {
+      usedNames.add(candidate);
       return candidate;
     }
   }
+
   // All historical names exhausted — synthesize a unique one with a high number
-  const extra = list.length + used.size + 1;
+  let extra = list.length + 1;
   const base = list[0];
   const match = base.match(/^(\d+)/);
-  if (match) {
-    return base.replace(/^\d+/, String(extra));
-  }
-  return `${extra}th ${base}`;
+  let name: string;
+  do {
+    if (match) {
+      name = base.replace(/^\d+/, String(extra));
+    } else {
+      name = `${extra}th ${base}`;
+    }
+    extra++;
+  } while (usedNames.has(name));
+  usedNames.add(name);
+  return name;
 }
