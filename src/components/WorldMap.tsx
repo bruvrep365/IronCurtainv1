@@ -286,19 +286,19 @@ function useAnimatedPositions(
 // NATO APP-6 standard symbols drawn as SVG. The frame shape distinguishes
 // friendly (rectangle) from hostile (diamond); the inner icon identifies the unit type.
 function renderNatoIcon(type: UnitType, color: string) {
-  const ic = 2; // icon half-size
+  const ic = 0.5; // icon half-size
   switch (type) {
     case 'infantry':
       // Two crossed lines (X) — NATO infantry symbol
       return (
-        <g stroke={color} strokeWidth={0.7} fill="none" strokeLinecap="round">
+        <g stroke={color} strokeWidth={0.18} fill="none" strokeLinecap="round">
           <line x1={-ic} y1={-ic} x2={ic} y2={ic} />
           <line x1={-ic} y1={ic} x2={ic} y2={-ic} />
         </g>
       );
     case 'armor':
       // Ellipse — NATO armor/armored symbol
-      return <ellipse cx={0} cy={0} rx={ic} ry={ic * 0.7} fill="none" stroke={color} strokeWidth={0.7} />;
+      return <ellipse cx={0} cy={0} rx={ic} ry={ic * 0.7} fill="none" stroke={color} strokeWidth={0.18} />;
     case 'air':
       // Curved arc (simplified aircraft wing arc) — NATO air symbol
       return (
@@ -306,7 +306,7 @@ function renderNatoIcon(type: UnitType, color: string) {
           d={`M ${-ic} ${ic * 0.3} Q 0 ${-ic * 1.2} ${ic} ${ic * 0.3}`}
           fill="none"
           stroke={color}
-          strokeWidth={0.7}
+          strokeWidth={0.18}
           strokeLinecap="round"
         />
       );
@@ -317,7 +317,7 @@ function renderNatoIcon(type: UnitType, color: string) {
           d={`M ${-ic} 0 Q ${-ic / 2} ${-ic * 0.6} 0 0 T ${ic} 0`}
           fill="none"
           stroke={color}
-          strokeWidth={0.7}
+          strokeWidth={0.18}
           strokeLinecap="round"
         />
       );
@@ -575,19 +575,19 @@ export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCi
             const frameColor = unit.owner === 'usa' ? '#3a8fd8' : '#d83a3a';
             const frameFill = unit.owner === 'usa' ? 'rgba(58,143,216,0.25)' : 'rgba(216,58,58,0.25)';
             const isSelected = selectedUnitId === unit.id;
-            const s = 3.5;
+            const s = 0.875;
             const frameType = friendly ? 'rect' : 'diamond';
             return (
               <Marker key={unit.id} coordinates={[pos.lon, pos.lat] as [number, number]}>
                 {/* Selection ring */}
                 {isSelected && (
-                  <circle r={s + 2.5} fill="none" stroke="#00e676" strokeWidth={1} opacity={0.9} />
+                  <circle r={s + 0.625} fill="none" stroke="#00e676" strokeWidth={0.25} opacity={0.9} />
                 )}
                 {/* NATO APP-6 frame: rectangle for friendly, diamond for hostile */}
                 {frameType === 'rect' ? (
-                  <rect x={-s} y={-s} width={s * 2} height={s * 2} fill={frameFill} stroke={frameColor} strokeWidth={isSelected ? 1 : 0.6} />
+                  <rect x={-s} y={-s} width={s * 2} height={s * 2} fill={frameFill} stroke={frameColor} strokeWidth={isSelected ? 0.25 : 0.15} />
                 ) : (
-                  <polygon points={`0,${-s * 1.4} ${s * 1.4},0 0,${s * 1.4} ${-s * 1.4},0`} fill={frameFill} stroke={frameColor} strokeWidth={isSelected ? 1 : 0.6} />
+                  <polygon points={`0,${-s * 1.4} ${s * 1.4},0 0,${s * 1.4} ${-s * 1.4},0`} fill={frameFill} stroke={frameColor} strokeWidth={isSelected ? 0.25 : 0.15} />
                 )}
                 {/* NATO APP-6 icon inside frame */}
                 {renderNatoIcon(unit.type, frameColor)}
