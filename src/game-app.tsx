@@ -368,10 +368,11 @@ export function GameApp() {
         </div>
 
         {/* RIGHT PANEL */}
-        <div className="w-72 border-l border-border bg-card p-3 flex flex-col gap-3 shrink-0">
-          <h2 className="text-xs font-bold text-primary uppercase tracking-widest border-b border-border pb-2">
+        <div className="w-72 border-l border-border bg-card p-3 flex flex-col gap-3 shrink-0 overflow-hidden">
+          <h2 className="text-xs font-bold text-primary uppercase tracking-widest border-b border-border pb-2 shrink-0">
             COMMAND CENTER
           </h2>
+          <div className="flex-1 overflow-y-auto space-y-3">
           <div className="space-y-2">
             {[
               { label: 'Prestige', value: pStats.prestige, max: 200, unit: '' },
@@ -432,7 +433,8 @@ export function GameApp() {
               [2 AP] Space Program (+Prestige)
             </button>
           </div>
-          <div className="mt-auto pt-3 border-t border-border">
+          </div>
+          <div className="pt-3 border-t border-border shrink-0">
             <button data-testid="button-end-turn" onClick={endTurn}
               className="w-full py-3 font-bold text-sm uppercase tracking-widest border-2 transition-all"
               style={{
