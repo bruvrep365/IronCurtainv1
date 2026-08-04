@@ -1038,10 +1038,8 @@ export function useGameState() {
                   logMsg = `Cannot move to ${dest.name}.`;
                 }
               } else {
-                // Units can be freely redeployed between allied nations and the
-                // player's own nation. Enemy/neutral territory still requires
-                // adjacency or a naval transport chain.
-                updatedUnits[s.selectedUnitId] = { ...unit, stateId: targetId, countryId: targetId, movesThisTurn: 1 };
+                const destStateId = dest.states[0] || targetId;
+                updatedUnits[s.selectedUnitId] = { ...unit, stateId: destStateId, countryId: targetId, movesThisTurn: 1 };
                 logMsg = `${unit.name} moved to ${dest.name}.`;
               }
             }
