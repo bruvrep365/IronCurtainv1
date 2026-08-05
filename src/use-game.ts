@@ -1046,7 +1046,8 @@ export function useGameState() {
                 if (!isAdjacent && !canReachBySea) {
                   logMsg = `Cannot move to ${dest.name} — not adjacent${hasNavy ? ' or reachable by sea' : ''}.`;
                 } else {
-                  updatedUnits[s.selectedUnitId] = { ...unit, stateId: targetId, countryId: targetId, movesThisTurn: 1 };
+                  const destStateId = dest.states[0] || targetId;
+                  updatedUnits[s.selectedUnitId] = { ...unit, stateId: destStateId, countryId: targetId, movesThisTurn: 1 };
                   logMsg = `${unit.name} moved to ${dest.name}.`;
                 }
               }

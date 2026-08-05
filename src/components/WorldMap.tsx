@@ -184,7 +184,12 @@ function computeUnitPositions(
   type Entry = { unitId: string; baseLon: number; baseLat: number };
   const byCountry: Record<string, Entry[]> = {};
   Object.values(units).forEach(unit => {
-    const st = states[unit.stateId];
+    let st: State | undefined = states[unit.stateId];
+    // Fallback: if stateId doesn't resolve (e.g. set to a country id),
+    // find any state belonging to the unit's country.
+    if (!st) {
+      st = Object.values(states).find(s => s.countryId === unit.countryId);
+    }
     if (!st) return;
     const arr = byCountry[unit.countryId] || (byCountry[unit.countryId] = []);
     arr.push({ unitId: unit.id, baseLon: st.lon, baseLat: st.lat });
