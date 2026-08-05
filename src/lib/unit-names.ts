@@ -236,9 +236,9 @@ export function generateUnitName(type: UnitType, countryId: string, owner: Facti
     }
   }
 
-  // All historical names exhausted — synthesize a unique one with a high number
-  let extra = list.length + 1;
-  const base = list[0];
+  // All historical names exhausted — synthesize a unique one with a random high number
+  let extra = list.length + 1 + Math.floor(Math.random() * 900);
+  const base = list[Math.floor(Math.random() * list.length)];
   const match = base.match(/^(\d+)/);
   let name: string;
   do {

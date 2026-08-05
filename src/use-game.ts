@@ -1124,12 +1124,11 @@ export function useGameState() {
           if (!b) return s;
           const dest = updatedCountries[country];
           if (!dest) return s;
-          const playerAlliance = s.playerFaction === 'usa' ? ['nato', 'western'] : ['warsaw', 'communist'];
-          const isOwnOrAlly = playerAlliance.includes(dest.alignment) ||
+          const isOwnNation =
             (s.playerFaction === 'usa' && country === 'usa') ||
             (s.playerFaction === 'ussr' && country === 'ussr');
-          if (!isOwnOrAlly) {
-            logMsg = `Cannot build in ${dest.name} — not friendly territory.`;
+          if (!isOwnNation) {
+            logMsg = `Can only build units in your own nation.`;
             newStats.actionPoints += 1;
             return { ...s, logs: [...s.logs, logMsg], ...(s.playerFaction === 'usa' ? { usaStats: newStats } : { ussrStats: newStats }) };
           }

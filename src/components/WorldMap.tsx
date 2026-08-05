@@ -173,7 +173,7 @@ const YUGO_ISOS = new Set(['688','191','070','705','499','807']);
 const CZECHO_ISOS = new Set(['203','703']);
 
 // ---- Unit position computation (ring layout so markers never overlap) ----
-const RING_STEP = 5;        // degrees between rings — wide enough to read each symbol
+const RING_STEP = 2;        // degrees between rings — tight clustering within a nation
 const PER_RING = 6;         // units per ring
 const RING_OFFSET = 0.4;    // angular offset so ring 2 sits between ring 1's gaps
 
