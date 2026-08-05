@@ -1038,11 +1038,17 @@ export function useGameState() {
                   logMsg = `Cannot move to ${dest.name}.`;
                 }
               } else {
-                // Units can be freely redeployed between allied nations and the
-                // player's own nation. Enemy/neutral territory still requires
-                // adjacency or a naval transport chain.
-                updatedUnits[s.selectedUnitId] = { ...unit, stateId: targetId, countryId: targetId, movesThisTurn: 1 };
-                logMsg = `${unit.name} moved to ${dest.name}.`;
+                // Units can only move to adjacent allied territory (or their own nation).
+                // Naval units can cross sea to coastal allied nations.
+                const isAdjacent = current.neighbors.includes(targetId);
+                const hasNavy = Object.values(s.units).some(u => u.owner === s.playerFaction && u.type === 'navy' && u.countryId === unit.countryId);
+                const canReachBySea = hasNavy && dest.coastal && current.coastal;
+                if (!isAdjacent && !canReachBySea) {
+                  logMsg = `Cannot move to ${dest.name} — not adjacent${hasNavy ? ' or reachable by sea' : ''}.`;
+                } else {
+                  updatedUnits[s.selectedUnitId] = { ...unit, stateId: targetId, countryId: targetId, movesThisTurn: 1 };
+                  logMsg = `${unit.name} moved to ${dest.name}.`;
+                }
               }
             }
           }
