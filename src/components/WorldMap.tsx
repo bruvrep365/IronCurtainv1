@@ -218,18 +218,25 @@ function easeOutCubic(t: number): number {
   return 1 - Math.pow(1 - t, 3);
 }
 
+export interface MoveTrail {
+  unitId: string;
+  from: { lon: number; lat: number };
+  to: { lon: number; lat: number };
+  progress: number; // 0 = just started, 1 = arrived
+}
+
 function useAnimatedPositions(
   targets: Record<string, { lon: number; lat: number }>,
   duration: number
-): Record<string, { lon: number; lat: number }> {
+): { positions: Record<string, { lon: number; lat: number }>; trails: MoveTrail[] } {
   const [current, setCurrent] = useState<Record<string, { lon: number; lat: number }>>(() => ({ ...targets }));
+  const [trails, setTrails] = useState<MoveTrail[]>([]);
   const currentRef = useRef(current);
   const startRef = useRef<Record<string, { lon: number; lat: number }>>({});
   const startTimeRef = useRef<number>(0);
   const rafRef = useRef<number | null>(null);
   const targetsRef = useRef(targets);
 
-  // Keep refs in sync
   useEffect(() => { targetsRef.current = targets; });
 
   const tick = useCallback(() => {
@@ -238,23 +245,29 @@ function useAnimatedPositions(
     const eased = easeOutCubic(t);
 
     const next: Record<string, { lon: number; lat: number }> = {};
+    const activeTrails: MoveTrail[] = [];
     const tgts = targetsRef.current;
     const starts = startRef.current;
     for (const id of Object.keys(tgts)) {
       const start = starts[id];
       const target = tgts[id];
       if (!start) {
-        // New unit — appear at target immediately
         next[id] = target;
       } else {
         next[id] = {
           lon: start.lon + (target.lon - start.lon) * eased,
           lat: start.lat + (target.lat - start.lat) * eased,
         };
+        // Only show a trail if the unit actually moved a meaningful distance
+        const dist = Math.hypot(target.lon - start.lon, target.lat - start.lat);
+        if (dist > 0.5 && t < 1) {
+          activeTrails.push({ unitId: id, from: start, to: target, progress: t });
+        }
       }
     }
     currentRef.current = next;
     setCurrent(next);
+    setTrails(activeTrails);
 
     if (t < 1) {
       rafRef.current = requestAnimationFrame(tick);
@@ -264,7 +277,6 @@ function useAnimatedPositions(
   }, [duration]);
 
   useEffect(() => {
-    // When targets change, capture start positions from current positions
     startRef.current = {};
     const cur = currentRef.current;
     for (const id of Object.keys(targets)) {
@@ -280,7 +292,7 @@ function useAnimatedPositions(
     };
   }, [targets, tick]);
 
-  return current;
+  return { positions: current, trails };
 }
 
 // NATO APP-6 standard symbols drawn as SVG. The frame shape distinguishes
@@ -371,7 +383,7 @@ export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCi
     () => (units && states ? computeUnitPositions(units, states) : {}),
     [units, states]
   );
-  const animatedPositions = useAnimatedPositions(targetPositions, 800);
+  const { positions: animatedPositions, trails } = useAnimatedPositions(targetPositions, 1200);
 
   return (
     <div className="w-full h-full" style={{ background: '#060c06' }}>
@@ -563,6 +575,32 @@ export function WorldMap({ countries, selectedCountryId, onCountryClick, chinaCi
                 >
                   {label}
                 </text>
+              </Marker>
+            );
+          })}
+
+          {/* Movement trails — dashed line from origin to destination that fades as the unit travels */}
+          {trails.map(trail => {
+            const fade = 1 - trail.progress;
+            const steps = 8;
+            const dots = Array.from({ length: steps }, (_, i) => {
+              const t = i / (steps - 1);
+              return {
+                lon: trail.from.lon + (trail.to.lon - trail.from.lon) * t,
+                lat: trail.from.lat + (trail.to.lat - trail.from.lat) * t,
+              };
+            });
+            return dots.map((dot, i) => (
+              <Marker key={`trail-${trail.unitId}-${i}`} coordinates={[dot.lon, dot.lat] as [number, number]}>
+                <circle r={0.25} fill="#ffd700" opacity={fade * 0.6 * (1 - i / steps * 0.3)} />
+              </Marker>
+            ));
+          })}
+          {trails.map(trail => {
+            const fade = 1 - trail.progress;
+            return (
+              <Marker key={`trail-origin-${trail.unitId}`} coordinates={[trail.from.lon, trail.from.lat] as [number, number]}>
+                <circle r={1.2} fill="none" stroke="#ffd700" strokeWidth={0.2} opacity={fade * 0.7} strokeDasharray="0.4 0.4" />
               </Marker>
             );
           })}
