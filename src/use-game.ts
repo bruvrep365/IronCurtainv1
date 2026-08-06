@@ -245,14 +245,14 @@ function resolveChinaCivilWar(state: GameState, newYear: number, newMonth: numbe
 
   let newEvent: GameState['activeEvent'] | undefined;
 
-  if (ccw.communistStates.length >= 9) {
+  if (ccw.nationalistStates.length === 0) {
     if (beforeDeadline && !hasOutsideSupport) {
-      // Bounce back: nationalists cling on — communists can't hold 9 yet
+      // Bounce back: nationalists cling on with one province
       const bounce = CHINA_NATIONALIST_ADVANCE_ORDER.find(p => ccw.communistStates.includes(p));
       const fallback = CHINA_COMMUNIST_ADVANCE_ORDER[CHINA_COMMUNIST_ADVANCE_ORDER.length - 1];
       const retreat = bounce ?? fallback;
       ccw.communistStates = ccw.communistStates.filter(p => p !== retreat);
-      ccw.nationalistStates = [...ccw.nationalistStates, retreat];
+      ccw.nationalistStates = [retreat];
     } else {
       ccw.resolved = true;
       ccw.winner = 'communist';
@@ -269,14 +269,14 @@ function resolveChinaCivilWar(state: GameState, newYear: number, newMonth: numbe
         ],
       };
     }
-  } else if (ccw.nationalistStates.length >= 9) {
+  } else if (ccw.communistStates.length === 0) {
     if (beforeDeadline && !hasOutsideSupport) {
-      // Bounce back: communists cling on — nationalists can't hold 9 yet
+      // Bounce back: communists cling on with one province
       const bounce = CHINA_COMMUNIST_ADVANCE_ORDER.find(p => ccw.nationalistStates.includes(p));
       const fallback = CHINA_NATIONALIST_ADVANCE_ORDER[CHINA_NATIONALIST_ADVANCE_ORDER.length - 1];
       const retreat = bounce ?? fallback;
       ccw.nationalistStates = ccw.nationalistStates.filter(p => p !== retreat);
-      ccw.communistStates = [...ccw.communistStates, retreat];
+      ccw.communistStates = [retreat];
     } else {
       ccw.resolved = true;
       ccw.winner = 'nationalist';
