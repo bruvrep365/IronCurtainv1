@@ -245,14 +245,14 @@ function resolveChinaCivilWar(state: GameState, newYear: number, newMonth: numbe
 
   let newEvent: GameState['activeEvent'] | undefined;
 
-  if (ccw.nationalistStates.length === 0) {
+  if (ccw.communistStates.length >= 9) {
     if (beforeDeadline && !hasOutsideSupport) {
-      // Bounce back: nationalists cling on with one province
+      // Bounce back: nationalists cling on — communists can't hold 9 yet
       const bounce = CHINA_NATIONALIST_ADVANCE_ORDER.find(p => ccw.communistStates.includes(p));
       const fallback = CHINA_COMMUNIST_ADVANCE_ORDER[CHINA_COMMUNIST_ADVANCE_ORDER.length - 1];
       const retreat = bounce ?? fallback;
       ccw.communistStates = ccw.communistStates.filter(p => p !== retreat);
-      ccw.nationalistStates = [retreat];
+      ccw.nationalistStates = [...ccw.nationalistStates, retreat];
     } else {
       ccw.resolved = true;
       ccw.winner = 'communist';
