@@ -269,14 +269,14 @@ function resolveChinaCivilWar(state: GameState, newYear: number, newMonth: numbe
         ],
       };
     }
-  } else if (ccw.communistStates.length === 0) {
+  } else if (ccw.nationalistStates.length >= 9) {
     if (beforeDeadline && !hasOutsideSupport) {
-      // Bounce back: communists cling on with one province
+      // Bounce back: communists cling on — nationalists can't hold 9 yet
       const bounce = CHINA_COMMUNIST_ADVANCE_ORDER.find(p => ccw.nationalistStates.includes(p));
       const fallback = CHINA_NATIONALIST_ADVANCE_ORDER[CHINA_NATIONALIST_ADVANCE_ORDER.length - 1];
       const retreat = bounce ?? fallback;
       ccw.nationalistStates = ccw.nationalistStates.filter(p => p !== retreat);
-      ccw.communistStates = [retreat];
+      ccw.communistStates = [...ccw.communistStates, retreat];
     } else {
       ccw.resolved = true;
       ccw.winner = 'nationalist';
