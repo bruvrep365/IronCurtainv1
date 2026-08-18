@@ -93,39 +93,55 @@ export function UnitPanel({ selectedCountry, units, playerFaction, selectedUnitI
             Strength: {selectedUnit.strength}/{selectedUnit.maxStrength}
             <br />Location: {countries[selectedUnit.countryId]?.name}
           </div>
-          {selectedUnit.movesThisTurn === 0 && (
-            <div className="mt-2 space-y-1">
-              <div className="text-xs uppercase tracking-widest" style={{ color: '#4a5a4a' }}>Move to:</div>
-              <div className="flex flex-wrap gap-1">
-                {selectedUnit.countryId && countries[selectedUnit.countryId]?.neighbors.map(n => {
-                  if (!canMoveTo(selectedUnit, n)) return null;
-                  return (
-                    <button
-                      key={n}
-                      onClick={() => onMoveUnit(n)}
-                      className="text-xs px-2 py-1 border"
-                      style={{ borderColor: '#1a3a1a', color: '#4a8a4a', background: '#0d1a0d' }}
-                    >
-                      {countries[n]?.name}
-                    </button>
-                  );
-                })}
-                {selectedUnit.countryId && countries[selectedUnit.countryId]?.neighbors.map(n => {
-                  if (!canAttack(selectedUnit, n)) return null;
-                  return (
-                    <button
-                      key={n}
-                      onClick={() => onAttack(n)}
-                      className="text-xs px-2 py-1 border"
-                      style={{ borderColor: '#3a1a1a', color: '#ff4444', background: '#2a0d0d' }}
-                    >
-                      ATTACK {countries[n]?.name}
-                    </button>
-                  );
-                })}
+          {selectedUnit.movesThisTurn === 0 && (() => {
+            const currentCountry = selectedUnit.countryId ? countries[selectedUnit.countryId] : null;
+            if (!currentCountry) return null;
+            const hasNavy = Object.values(units).some(u => u.owner === playerFaction && u.type === 'navy' && u.countryId === currentCountry.id);
+            // Build full list of move targets: neighbors + sea-reachable allied coastal countries
+            const moveTargets = new Set<string>(currentCountry.neighbors);
+            if (hasNavy && currentCountry.coastal) {
+              Object.values(countries).forEach(c => {
+                if (c.id !== currentCountry.id && c.coastal && !currentCountry.neighbors.includes(c.id)) {
+                  if (canMoveTo(selectedUnit, c.id)) moveTargets.add(c.id);
+                }
+              });
+            }
+            return (
+              <div className="mt-2 space-y-1">
+                <div className="text-xs uppercase tracking-widest" style={{ color: '#4a5a4a' }}>Move to:</div>
+                <div className="flex flex-wrap gap-1">
+                  {Array.from(moveTargets).map(n => {
+                    if (!canMoveTo(selectedUnit, n)) return null;
+                    const isSeaMove = !currentCountry.neighbors.includes(n);
+                    return (
+                      <button
+                        key={n}
+                        onClick={() => onMoveUnit(n)}
+                        className="text-xs px-2 py-1 border"
+                        style={{ borderColor: '#1a3a1a', color: '#4a8a4a', background: '#0d1a0d' }}
+                        title={isSeaMove ? 'Sea transport via navy' : undefined}
+                      >
+                        {isSeaMove ? '\u2248' : ''} {countries[n]?.name}
+                      </button>
+                    );
+                  })}
+                  {currentCountry.neighbors.map(n => {
+                    if (!canAttack(selectedUnit, n)) return null;
+                    return (
+                      <button
+                        key={n}
+                        onClick={() => onAttack(n)}
+                        className="text-xs px-2 py-1 border"
+                        style={{ borderColor: '#3a1a1a', color: '#ff4444', background: '#2a0d0d' }}
+                      >
+                        ATTACK {countries[n]?.name}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
 
