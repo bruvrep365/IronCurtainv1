@@ -724,6 +724,14 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
   nextUSA.gdp = Math.round(nextUSA.gdp + tradeIncome.usa - nextUSA.maintenanceCost);
   nextUSSR.gdp = Math.round(nextUSSR.gdp + tradeIncome.ussr - nextUSSR.maintenanceCost);
 
+  // Clear contested status for nations that have stabilized (stability 100)
+  // and are not in a civil war.
+  Object.values(updatedCountries).forEach(c => {
+    if (c.isContested && !c.inCivilWar && c.stability >= 100) {
+      updatedCountries[c.id] = { ...c, isContested: false };
+    }
+  });
+
   return {
     year: newYear,
     month: newMonth,
@@ -831,7 +839,8 @@ export function useGameState() {
             if (isInPlayerAlliance || isOwnNation) {
               // Propaganda Drive: increases stability for own nation or allies
               const stabilityIncrease = 5;
-              updatedCountries[targetId] = { ...c, stability: Math.min(100, c.stability + stabilityIncrease) };
+              const newStability = Math.min(100, c.stability + stabilityIncrease);
+              updatedCountries[targetId] = { ...c, stability: newStability, ...(newStability >= 100 && !c.inCivilWar ? { isContested: false } : {}) };
               newStats.prestige += 3;
               logMsg = `Propaganda drive in ${c.name}. Stability +${stabilityIncrease}.`;
             } else {
