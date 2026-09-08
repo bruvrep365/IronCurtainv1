@@ -106,6 +106,8 @@ const DEFAULT_CCW: ChinaCivilWar = {
   stalemateStreak: 0,
   lastBattleDirection: 0,
   lastCommunistCount: 3,
+  communistNinePlusTurns: 0,
+  nationalistTenTurns: 0,
 };
 
 /** Advance the Chinese Civil War one month based on aid balance. */
@@ -146,6 +148,8 @@ function resolveChinaCivilWar(state: GameState, newYear: number, newMonth: numbe
         stalemateStreak: state.chinaCivilWar.stalemateStreak ?? 0,
         lastBattleDirection: state.chinaCivilWar.lastBattleDirection ?? 0,
         lastCommunistCount: state.chinaCivilWar.lastCommunistCount ?? state.chinaCivilWar.communistStates.length,
+        communistNinePlusTurns: state.chinaCivilWar.communistNinePlusTurns ?? 0,
+        nationalistTenTurns: state.chinaCivilWar.nationalistTenTurns ?? 0,
       }
     : { ...DEFAULT_CCW };
 
@@ -233,6 +237,19 @@ function resolveChinaCivilWar(state: GameState, newYear: number, newMonth: numbe
   ccw.lastBattleDirection = thisDirection !== 0 ? thisDirection : lastDir;
   ccw.lastCommunistCount = ccw.communistStates.length;
 
+  // --- Province-hold auto-win ---
+  // Communists holding 9+ provinces for 3 consecutive turns auto-win.
+  // Nationalists holding more than 9 (all 10) provinces for 3 consecutive
+  // turns auto-win, but only after 1953.
+  ccw.communistNinePlusTurns = ccw.communistStates.length >= 9
+    ? ccw.communistNinePlusTurns + 1 : 0;
+  ccw.nationalistTenTurns = ccw.nationalistStates.length > 9
+    ? ccw.nationalistTenTurns + 1 : 0;
+
+  const communistAutoWin = ccw.communistNinePlusTurns > 3;
+  const after1953 = newYear > 1953;
+  const nationalistAutoWin = after1953 && ccw.nationalistTenTurns > 3;
+
   // --- Check for resolution ---
   // Before October 1949, the war cannot end without significant outside support.
   // The losing side bounces back with 1 province instead of being eliminated.
@@ -245,8 +262,8 @@ function resolveChinaCivilWar(state: GameState, newYear: number, newMonth: numbe
 
   let newEvent: GameState['activeEvent'] | undefined;
 
-  if (ccw.nationalistStates.length === 0) {
-    if (beforeDeadline && !hasOutsideSupport) {
+  if (ccw.nationalistStates.length === 0 || communistAutoWin) {
+    if (beforeDeadline && !hasOutsideSupport && !communistAutoWin) {
       // Bounce back: nationalists cling on with one province
       const bounce = CHINA_NATIONALIST_ADVANCE_ORDER.find(p => ccw.communistStates.includes(p));
       const fallback = CHINA_COMMUNIST_ADVANCE_ORDER[CHINA_COMMUNIST_ADVANCE_ORDER.length - 1];
@@ -269,8 +286,8 @@ function resolveChinaCivilWar(state: GameState, newYear: number, newMonth: numbe
         ],
       };
     }
-  } else if (ccw.communistStates.length === 0) {
-    if (beforeDeadline && !hasOutsideSupport) {
+  } else if (ccw.communistStates.length === 0 || nationalistAutoWin) {
+    if (beforeDeadline && !hasOutsideSupport && !nationalistAutoWin) {
       // Bounce back: communists cling on with one province
       const bounce = CHINA_COMMUNIST_ADVANCE_ORDER.find(p => ccw.nationalistStates.includes(p));
       const fallback = CHINA_NATIONALIST_ADVANCE_ORDER[CHINA_NATIONALIST_ADVANCE_ORDER.length - 1];

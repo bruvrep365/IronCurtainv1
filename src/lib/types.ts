@@ -165,6 +165,10 @@ export interface ChinaCivilWar {
   lastBattleDirection: number;
   /** Communist province count at the end of the previous turn (stalemate detection). */
   lastCommunistCount: number;
+  /** Consecutive months communists have held 9+ provinces (auto-win at 3). */
+  communistNinePlusTurns: number;
+  /** Consecutive months nationalists have held 10 provinces (auto-win at 3, after 1953). */
+  nationalistTenTurns: number;
 }
 
 export interface CubanRevolution {

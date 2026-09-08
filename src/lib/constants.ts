@@ -1234,6 +1234,8 @@ export const INITIAL_STATE: GameState = {
     stalemateStreak: 0,
     lastBattleDirection: 0,
     lastCommunistCount: CHINA_COMMUNIST_INITIAL.length,
+    communistNinePlusTurns: 0,
+    nationalistTenTurns: 0,
   },
   cubanRevolution: {
     communistStates: [],
