@@ -1270,4 +1270,5 @@ export const INITIAL_STATE: GameState = {
   tradeRoutes: TRADE_ROUTES,
   zoom: 1,
   center: [20, 0],
+  atWarWith: [],
 };

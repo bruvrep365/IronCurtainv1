@@ -11,6 +11,7 @@ interface UnitPanelProps {
   onMoveUnit: (targetCountry: string) => void;
   onAttack: (targetCountry: string) => void;
   onBuildUnit: (unitType: UnitType, countryId: string) => void;
+  atWarWith: string[];
   productionPoints: number;
   actionPoints: number;
 }
@@ -29,7 +30,7 @@ const TYPE_COLORS: Record<UnitType, string> = {
   navy: '#4a8a6a',
 };
 
-export function UnitPanel({ selectedCountry, units, playerFaction, selectedUnitId, countries, onSelectUnit, onMoveUnit, onAttack, onBuildUnit, productionPoints, actionPoints }: UnitPanelProps) {
+export function UnitPanel({ selectedCountry, units, playerFaction, selectedUnitId, countries, onSelectUnit, onMoveUnit, onAttack, onBuildUnit, atWarWith, productionPoints, actionPoints }: UnitPanelProps) {
   const countryUnits = selectedCountry
     ? Object.values(units).filter(u => u.countryId === selectedCountry.id && u.owner === playerFaction)
     : [];
@@ -70,7 +71,8 @@ export function UnitPanel({ selectedCountry, units, playerFaction, selectedUnitI
     const isEnemy = playerFaction === 'usa'
       ? (dest.alignment === 'warsaw' || dest.alignment === 'communist')
       : (dest.alignment === 'nato' || dest.alignment === 'western');
-    return canReach && isEnemy;
+    const atWar = atWarWith?.includes(target);
+    return canReach && isEnemy && atWar;
   };
 
   return (

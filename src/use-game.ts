@@ -81,6 +81,8 @@ function canInvade(state: GameState, attackerCountry: string, targetCountry: str
   if (!sameFaction && !sameFactionUSSR) return { ok: false, reason: 'Not your territory' };
   const isEnemy = attackerFaction === 'usa' ? (target.alignment === 'warsaw' || target.alignment === 'communist') : (target.alignment === 'nato' || target.alignment === 'western');
   if (!isEnemy) return { ok: false, reason: 'Not an enemy' };
+  const atWar = state.atWarWith?.includes(targetCountry);
+  if (!atWar) return { ok: false, reason: 'Not at war — declare war first' };
   const adjacent = attacker.neighbors.includes(targetCountry);
   const hasNavy = Object.values(state.units).some(u => u.owner === attackerFaction && u.type === 'navy' && u.countryId === attackerCountry);
   const canReach = adjacent || (hasNavy && target.coastal && attacker.coastal);
@@ -738,6 +740,30 @@ function resolveTurnEnd(state: GameState): Partial<GameState> {
   nextUSA.gdp = Math.round(nextUSA.gdp + tradeIncome.usa - nextUSA.maintenanceCost);
   nextUSSR.gdp = Math.round(nextUSSR.gdp + tradeIncome.ussr - nextUSSR.maintenanceCost);
 
+  // Stability bonus: each player division stationed in an allied country
+  // (not the player's own nation) increases that country's stability by 3.
+  if (state.playerFaction) {
+    const playerAlliance = state.playerFaction === 'usa' ? ['nato', 'western'] : ['warsaw', 'communist'];
+    const ownNation = state.playerFaction === 'usa' ? 'usa' : 'ussr';
+    const alliedUnitCounts: Record<string, number> = {};
+    Object.values(updatedUnits).forEach(u => {
+      if (u.owner !== state.playerFaction) return;
+      if (u.countryId === ownNation) return;
+      const c = updatedCountries[u.countryId];
+      if (!c || !playerAlliance.includes(c.alignment)) return;
+      alliedUnitCounts[u.countryId] = (alliedUnitCounts[u.countryId] ?? 0) + 1;
+    });
+    Object.entries(alliedUnitCounts).forEach(([countryId, count]) => {
+      const c = updatedCountries[countryId];
+      if (!c) return;
+      const bonus = count * 3;
+      updatedCountries[countryId] = {
+        ...c,
+        stability: Math.min(100, c.stability + bonus),
+      };
+    });
+  }
+
   // Clear contested status for nations that have stabilized (stability 100)
   // and are not in a civil war.
   Object.values(updatedCountries).forEach(c => {
@@ -1036,6 +1062,39 @@ export function useGameState() {
         newStats = { ...newStats, actionPoints: newStats.actionPoints - 1 };
         newStats.prestige += 30;
         logMsg = 'Space program launch. Prestige +30.';
+      } else if (actionId === 'declare_war') {
+        if (targetId) {
+          const c = updatedCountries[targetId];
+          if (!c) { logMsg = 'Invalid target.'; newStats.actionPoints += 1; }
+          else {
+            const playerAlliance = s.playerFaction === 'usa' ? ['nato', 'western'] : ['warsaw', 'communist'];
+            const isOwnNation = (s.playerFaction === 'usa' && targetId === 'usa') || (s.playerFaction === 'ussr' && targetId === 'ussr');
+            const isAllied = playerAlliance.includes(c.alignment);
+            if (isOwnNation || isAllied) {
+              logMsg = 'Cannot declare war on yourself or an ally.';
+              newStats.actionPoints += 1;
+            } else {
+              const alreadyAtWar = (s.atWarWith ?? []).includes(targetId);
+              if (alreadyAtWar) {
+                logMsg = `Already at war with ${c.name}.`;
+                newStats.actionPoints += 1;
+              } else {
+                const warList = [...(s.atWarWith ?? []), targetId];
+                newTension += 15;
+                logMsg = `War declared on ${c.name}. Tension +15.`;
+                return {
+                  ...s,
+                  atWarWith: warList,
+                  tension: Math.min(100, Math.max(0, newTension)),
+                  logs: [...s.logs, logMsg],
+                  countries: updatedCountries,
+                  units: updatedUnits,
+                  ...(s.playerFaction === 'usa' ? { usaStats: newStats } : { ussrStats: newStats }),
+                };
+              }
+            }
+          }
+        }
       } else if (actionId === 'move_unit') {
         if (targetId && s.selectedUnitId) {
           const unit = updatedUnits[s.selectedUnitId];

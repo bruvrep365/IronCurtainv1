@@ -235,6 +235,8 @@ export interface GameState {
   tradeRoutes: { from: string; to: string; value: number }[];
   zoom: number;
   center: [number, number];
+  /** Country IDs the player is currently at war with. */
+  atWarWith: string[];
 }
 
 export interface GameEvent {

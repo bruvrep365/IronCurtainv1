@@ -230,6 +230,22 @@ export function GameApp() {
                         style={{ background: '#1a1a0d', color: '#8a8a4a' }}>
                         [1 AP] Intelligence Op (-3 Stability)
                       </button>
+                      {(() => {
+                        const playerAlliance = isUSA ? ['nato', 'western'] : ['warsaw', 'communist'];
+                        const isOwnNation = (isUSA && selectedCountry.id === 'usa') || (!isUSA && selectedCountry.id === 'ussr');
+                        const isAllied = playerAlliance.includes(selectedCountry.alignment);
+                        const alreadyAtWar = (state.atWarWith ?? []).includes(selectedCountry.id);
+                        if (isOwnNation || isAllied || alreadyAtWar) return null;
+                        return (
+                          <button data-testid={`button-declare-war-${selectedCountry.id}`}
+                            onClick={() => performAction('declare_war', selectedCountry.id)}
+                            disabled={pStats.actionPoints < 1}
+                            className="w-full text-left px-3 py-2 text-xs border border-border uppercase tracking-widest disabled:opacity-40"
+                            style={{ background: '#3a0d0d', color: '#ff4444' }}>
+                            [1 AP] Declare War (+15 Tension)
+                          </button>
+                        );
+                      })()}
                     </div>
                   </>
                 ) : null}
@@ -336,6 +352,7 @@ export function GameApp() {
                 onMoveUnit={(target) => performAction('move_unit', target)}
                 onAttack={(target) => performAction('attack', target)}
                 onBuildUnit={(type, country) => performAction('build_unit', `${type}:${country}`)}
+                atWarWith={state.atWarWith ?? []}
                 productionPoints={pStats.productionPoints}
                 actionPoints={pStats.actionPoints}
               />
