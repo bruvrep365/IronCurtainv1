@@ -238,17 +238,14 @@ function resolveChinaCivilWar(state: GameState, newYear: number, newMonth: numbe
   ccw.lastCommunistCount = ccw.communistStates.length;
 
   // --- Province-hold auto-win ---
-  // Communists holding 9+ provinces for 3 consecutive turns auto-win.
-  // Nationalists holding more than 9 (all 10) provinces for 3 consecutive
-  // turns auto-win, but only after 1953.
-  ccw.communistNinePlusTurns = ccw.communistStates.length >= 9
+  // Both sides holding 7+ provinces for 3 consecutive turns auto-win.
+  ccw.communistNinePlusTurns = ccw.communistStates.length >= 7
     ? ccw.communistNinePlusTurns + 1 : 0;
-  ccw.nationalistTenTurns = ccw.nationalistStates.length > 9
+  ccw.nationalistTenTurns = ccw.nationalistStates.length >= 7
     ? ccw.nationalistTenTurns + 1 : 0;
 
   const communistAutoWin = ccw.communistNinePlusTurns > 3;
-  const after1953 = newYear > 1953;
-  const nationalistAutoWin = after1953 && ccw.nationalistTenTurns > 3;
+  const nationalistAutoWin = ccw.nationalistTenTurns > 3;
 
   // --- Check for resolution ---
   // Before October 1949, the war cannot end without significant outside support.
